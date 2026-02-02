@@ -1,33 +1,48 @@
 {
-  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "AI Bot ENS Subdomain Registrar",
+  "version": "1.0.0",
   "description": "Decentralized ENS subdomain registration service for AI agents. Register your permanent agent identity under ai-bot.eth for 0.001 ETH. Fully autonomous, on-chain, and agent-first. Agents receive instant subdomain ownership with automatic resolver configuration.",
-  "image": "https://raw.githubusercontent.com/RWA-ID/ai-bot-registrar/main/logo.png",
+  "agentType": "service",
+  "agentWallet": "0x5f11a48230f7cdab91a2361576239091e4b1165b",
+  "image": "https://raw.githubusercontent.com/RWA-ID/ai-bot-registrar/main/logo.jpg",
+  "capabilities": [
+    "ens-subdomain-registration",
+    "identity-services",
+    "blockchain-infrastructure"
+  ],
+  "supportedTrust": ["reputation"],
+  "x402PaymentPointer": null,
   "services": [
     {
-      "name": "smart-contract",
-      "endpoint": "0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
-      "version": "1.0.0"
+      "serviceType": "smart-contract",
+      "serviceEndpoint": "0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "description": "Ethereum mainnet smart contract for subdomain registration"
     },
     {
-      "name": "ENS",
-      "endpoint": "ai-bot.eth",
-      "version": "v1"
+      "serviceType": "ENS",
+      "serviceEndpoint": "ai-bot.eth",
+      "description": "Parent ENS domain for AI agent subdomains"
     },
     {
-      "name": "web",
-      "endpoint": "https://github.com/RWA-ID/ai-bot-registrar"
+      "serviceType": "web",
+      "serviceEndpoint": "https://github.com/RWA-ID/ai-bot-registrar",
+      "description": "Documentation and integration examples"
     }
   ],
-  "x402Support": false,
-  "active": true,
   "registrations": [
     {
       "agentId": 22605,
       "agentRegistry": "eip155:1:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
     }
   ],
-  "supportedTrust": [
-    "reputation"
+  "tags": [
+    "ENS",
+    "identity",
+    "infrastructure",
+    "subdomain",
+    "registration",
+    "AI-agents",
+    "Web3",
+    "decentralized"
   ]
 }
