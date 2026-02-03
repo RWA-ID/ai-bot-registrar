@@ -225,7 +225,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/ai-bot-registrar/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/ai-bot-registrar/discussions)
-- **Twitter**: [@your_handle](https://twitter.com/your_handle)
+- **Twitter**: [https://x.com/ai_bot_eth?s=20)
 
 ---
 
