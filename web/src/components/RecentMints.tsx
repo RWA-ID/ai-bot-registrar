@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { decodeEventLog, parseAbi } from "viem";
 import { REGISTRAR_ADDRESS, PARENT_DOMAIN } from "../lib/contract";
+import { ArrowNE } from "./ArrowNE";
 
 interface MintEvent {
   subdomain: string;
@@ -71,7 +72,7 @@ export function RecentMints({ refreshKey }: { refreshKey: number }) {
 
         const sorted = logs.slice().reverse();
         setTotal(sorted.length);
-        setMints(sorted.slice(0, 10));
+        setMints(sorted.slice(0, 6));
       } catch {
         // silently fail
       } finally {
@@ -84,68 +85,56 @@ export function RecentMints({ refreshKey }: { refreshKey: number }) {
   }, [refreshKey]);
 
   return (
-    <div className="card p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-sm font-bold text-[#f0f0f0] uppercase tracking-wider">Recent Registrations</h2>
-        {!loading && (
-          <span className="tag tag-cyan">{total} total</span>
+    <div className="flex flex-col gap-5 min-w-0">
+      <div className="flex justify-between items-center gap-3">
+        <h3 className="h3">Recent registrations</h3>
+        {!loading && total > 0 && (
+          <span className="font-mono text-xs text-[var(--lime)] border border-[rgba(200,245,60,.35)] px-2.5 py-[5px] whitespace-nowrap">
+            {total} total
+          </span>
         )}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-12 rounded-xl bg-[#0f0f18] animate-pulse" />
-          ))}
-        </div>
-      ) : mints.length === 0 ? (
-        <p className="text-[#444] text-sm">No registrations found yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {mints.map((mint, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between py-3 px-4 rounded-xl bg-[rgba(6,182,212,0.02)] border border-[#1a1a2e] hover:border-[rgba(6,182,212,0.15)] transition-colors group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-sm shrink-0">🤖</span>
-                <div className="min-w-0">
-                  <p className="text-[#f0f0f0] font-mono font-semibold truncate">
-                    {mint.subdomain}
-                    <span className="text-[#444]">.{PARENT_DOMAIN}</span>
-                  </p>
-                  <p className="text-[#444] text-xs">
-                    by{" "}
-                    <a
-                      href={`https://etherscan.io/address/${mint.owner}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#555] hover:text-[#06b6d4] transition-colors"
-                    >
-                      {shortAddr(mint.owner)}
-                    </a>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[#444] text-xs hidden sm:block">
-                  {mint.timestamp > 0n ? timeAgo(mint.timestamp) : ""}
-                </span>
-                {mint.txHash && (
-                  <a
-                    href={`https://etherscan.io/tx/${mint.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-[#333] group-hover:text-[#06b6d4] transition-colors"
-                  >
-                    ↗
-                  </a>
-                )}
-              </div>
+      <div className="flex flex-col border-t border-[var(--border)]">
+        {loading ? (
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="h-[69px] border-b border-[var(--border)] flex items-center px-1">
+              <div className="h-4 w-1/2 bg-[var(--surface)] animate-pulse" />
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        ) : mints.length === 0 ? (
+          <p className="py-4 px-1 text-sm text-[var(--muted)]">No registrations found yet.</p>
+        ) : (
+          mints.map((mint, i) => (
+            <a
+              key={mint.txHash || i}
+              href={`https://etherscan.io/tx/${mint.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-4 py-4 px-1 border-b border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] row-hover"
+            >
+              <span className="font-mono text-[11px] text-[var(--dim)] w-9 shrink-0">
+                {String(total - i).padStart(4, "0")}
+              </span>
+              <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
+                <span className="font-mono text-[15px] font-semibold truncate">
+                  {mint.subdomain}
+                  <span className="text-[var(--dim)]">.{PARENT_DOMAIN}</span>
+                </span>
+                <span className="text-xs text-[var(--muted)]">
+                  by <span className="font-mono">{shortAddr(mint.owner)}</span>
+                </span>
+              </div>
+              <span className="font-mono text-xs text-[var(--muted)] shrink-0">
+                {mint.timestamp > 0n ? timeAgo(mint.timestamp) : ""}
+              </span>
+              <span className="text-[var(--lime)] text-sm shrink-0">
+                <ArrowNE />
+              </span>
+            </a>
+          ))
+        )}
+      </div>
     </div>
   );
 }

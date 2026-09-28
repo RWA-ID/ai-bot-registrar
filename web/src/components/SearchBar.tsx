@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useReadContracts, useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { formatEther } from "viem";
+import { useAppKit } from "@reown/appkit/react";
+import { ArrowNE } from "./ArrowNE";
 import { ABI, REGISTRAR_ADDRESS, NAME_WRAPPER_ADDRESS, NAME_WRAPPER_ABI, REGISTRATION_FEE, PARENT_DOMAIN, getSubnodeHash } from "../lib/contract";
 
 type CheckState = "idle" | "checking" | "available" | "taken" | "invalid";
@@ -30,7 +30,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
   const [minted, setMinted] = useState<MintedInfo | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const { isConnected, address } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { open: openConnectModal } = useAppKit();
 
   const enabled = query.length >= 3 && isValid(query);
 
@@ -123,7 +123,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
 
   const handleRegister = () => {
     if (!isConnected) {
-      openConnectModal?.();
+      openConnectModal();
       return;
     }
     writeContract({
@@ -150,88 +150,68 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent("https://ai-bot.eth.link")}`;
 
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <div
-          className="card p-8 animate-slide-up text-center space-y-6"
-          style={{ borderColor: "rgba(16,185,129,0.4)", background: "rgba(16,185,129,0.03)" }}
-        >
-          {/* Icon */}
-          <div className="flex justify-center">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
-              style={{ background: "rgba(16,185,129,0.1)", border: "2px solid rgba(16,185,129,0.3)" }}
-            >
-              🤖
-            </div>
-          </div>
-
-          {/* Heading */}
-          <div className="space-y-2">
-            <p className="text-[#10b981] font-bold uppercase tracking-widest text-xs">Registration Successful</p>
-            <p className="text-[#f0f0f0] font-mono text-2xl font-bold break-all">{minted.name}</p>
-            <p className="text-[#555] text-sm">Your AI agent now has a permanent ENS identity on Ethereum.</p>
-          </div>
-
-          {/* Tx hash */}
-          <div
-            className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
-            style={{ background: "#0a0a12", border: "1px solid #1a1a2e" }}
-          >
-            <div className="text-left">
-              <p className="text-[#444] text-xs mb-1">Transaction</p>
-              <p className="font-mono text-[#888] text-sm">{shortHash(minted.txHash)}</p>
-            </div>
-            <a
-              href={`https://etherscan.io/tx/${minted.txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-[#06b6d4] hover:underline shrink-0"
-            >
-              View on Etherscan ↗
-            </a>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href={shareUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary flex-1 py-3 text-sm flex items-center justify-center gap-2"
-              style={{ background: "#000", border: "1px solid #333", color: "#fff" }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-              Share on X
-            </a>
-            <a
-              href={`https://app.ens.domains/${minted.name}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary flex-1 py-3 text-sm flex items-center justify-center gap-2"
-              style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)", color: "#06b6d4" }}
-            >
-              Open in ENS Manager ↗
-            </a>
-          </div>
-
-          <button
-            onClick={handleRegisterAnother}
-            className="text-xs text-[#444] hover:text-[#888] transition-colors"
-          >
-            Register another name →
-          </button>
+      <div className="border border-[var(--lime)] bg-[var(--surface)] p-[26px] flex flex-col gap-5 rise">
+        <div className="flex flex-col gap-2">
+          <span className="eyebrow text-[var(--lime)]">Registration successful</span>
+          <span className="font-display font-bold text-[30px] break-all">{minted.name}</span>
+          <span className="text-sm text-[var(--text-2)]">Your agent now has a permanent ENS identity on Ethereum.</span>
         </div>
+
+        <div className="flex justify-between items-center gap-3 px-4 py-3 bg-[var(--bg)] border border-[var(--border)] font-mono text-[13px]">
+          <span className="text-[var(--muted)]">tx {shortHash(minted.txHash)}</span>
+          <a
+            href={`https://etherscan.io/tx/${minted.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs inline-flex items-center gap-1 shrink-0"
+          >
+            Etherscan <ArrowNE />
+          </a>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-lime flex-1 min-w-[160px] p-[13px]"
+          >
+            Share on X
+          </a>
+          <a
+            href={`https://app.ens.domains/${minted.name}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline flex-1 min-w-[160px] p-[13px]"
+          >
+            ENS Manager <ArrowNE />
+          </a>
+        </div>
+
+        <button
+          onClick={handleRegisterAnother}
+          className="self-start bg-transparent border-0 p-0 cursor-pointer font-mono text-xs text-[var(--muted)] hover:text-[var(--text)]"
+        >
+          Register another name →
+        </button>
       </div>
     );
   }
 
+  const registerLabel = isRegistering
+    ? isMining
+      ? "Confirming…"
+      : "Confirm in wallet…"
+    : isConnected
+    ? "Register name →"
+    : "Connect & register →";
+
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
-      {/* Search input */}
-      <div className="relative">
-        <div className="flex items-center gap-0">
+    <div className="flex flex-col gap-3.5">
+      {/* Search input: 1px border = outer wrapper padding, both chamfered */}
+      <div className="bg-[var(--border-strong)] p-px chamfer-16 focus-within:bg-[var(--lime)] transition-colors">
+        <div className="flex items-stretch bg-[var(--surface)] chamfer-16">
+          <div className="flex items-center pl-[22px] text-[var(--lime)] font-mono text-lg">&gt;</div>
           <input
             type="text"
             value={input}
@@ -240,89 +220,88 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
             maxLength={32}
             spellCheck={false}
             autoComplete="off"
-            className="input-field flex-1 px-5 py-4 text-lg rounded-r-none border-r-0 focus:z-10"
+            autoCapitalize="off"
+            aria-label="Name to register"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[var(--text)] font-mono text-lg sm:text-xl py-[22px] px-3"
           />
-          <div className="px-4 py-4 bg-[#0a0a12] border border-[#1a1a2e] border-l-0 rounded-r-xl text-[#444] text-base whitespace-nowrap font-mono">
+          {checkState === "checking" && (
+            <div className="flex items-center px-2 text-[var(--lime)]">
+              <div className="w-4 h-4 spinner" />
+            </div>
+          )}
+          <div className="flex items-center px-4 sm:px-[22px] font-mono text-sm sm:text-base text-[var(--muted)] border-l border-[var(--border)] whitespace-nowrap">
             .ai-bot.eth
           </div>
         </div>
-
-        {checkState === "checking" && (
-          <div className="absolute right-28 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-[#06b6d4] border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
       </div>
 
-      {checkState === "invalid" && input.length > 0 && (
-        <div className="card p-4 animate-fade-in">
-          <p className="text-[#ef4444] text-sm">
-            Names must be 3–32 characters, letters, numbers, and hyphens only. Cannot start or end with a hyphen.
-          </p>
+      {checkState === "idle" && (
+        <div className="flex flex-wrap gap-[18px] font-mono text-xs text-[var(--muted)]">
+          <span>0.001 ETH</span>
+          <span className="text-[#3a3e34]">/</span>
+          <span>One-time</span>
+          <span className="text-[#3a3e34]">/</span>
+          <span>Instant</span>
+          <span className="text-[#3a3e34]">/</span>
+          <span>Yours forever</span>
         </div>
       )}
 
-      {checkState === "available" && fullName && (
-        <div className="card p-5 border-[#10b981]/30 glow-green animate-slide-up">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
-                <span className="text-[#10b981] text-xs font-semibold uppercase tracking-wider">Available</span>
-              </div>
-              <p className="text-[#f0f0f0] text-lg font-bold break-all">{fullName}</p>
-              <p className="text-[#555] text-sm">
-                One-time fee · No renewals · You own it forever
-              </p>
-            </div>
-            <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
-              <p className="text-[#f0f0f0] font-bold text-xl">
-                {formatEther(REGISTRATION_FEE)} ETH
-              </p>
-              <button
-                className="btn-primary px-6 py-3 text-sm w-full sm:w-auto"
-                onClick={handleRegister}
-                disabled={isRegistering}
-              >
-                {isRegistering
-                  ? isMining
-                    ? "⏳ Confirming..."
-                    : "⏳ Waiting..."
-                  : isConnected
-                  ? "Register Name →"
-                  : "Connect & Register →"}
-              </button>
-            </div>
-          </div>
-
-          {txHash && isMining && (
-            <div className="mt-4 pt-4 border-t border-[#1a1a2e] flex items-center gap-2 text-xs text-[#555]">
-              <div className="w-3 h-3 border-2 border-[#06b6d4] border-t-transparent rounded-full animate-spin" />
-              <span>Transaction submitted — waiting for confirmation...</span>
-              <a
-                href={`https://etherscan.io/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#06b6d4] hover:underline ml-auto"
-              >
-                View ↗
-              </a>
-            </div>
-          )}
+      {checkState === "invalid" && input.length > 0 && (
+        <div className="px-[18px] py-3.5 border border-[rgba(255,107,87,.35)] bg-[rgba(255,107,87,.06)] text-[var(--danger-text)] text-sm leading-normal rise">
+          Names must be 3–32 characters: letters, numbers and hyphens. No leading or trailing hyphen.
         </div>
       )}
 
       {checkState === "taken" && fullName && (
-        <div className="card p-5 border-[#ef4444]/20 glow-red animate-slide-up">
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-            <div>
-              <p className="text-[#ef4444] text-xs font-semibold uppercase tracking-wider mb-1">Already Registered</p>
-              <p className="text-[#888] text-sm">
-                <span className="text-[#f0f0f0] font-semibold">{fullName}</span> is taken. Try a different name.
-              </p>
-            </div>
+        <div className="flex items-center gap-3.5 px-5 py-[18px] border border-[rgba(255,107,87,.35)] bg-[rgba(255,107,87,.06)] rise">
+          <span className="w-2 h-2 rounded-full bg-[var(--danger)] shrink-0" />
+          <div className="flex flex-col gap-1">
+            <span className="eyebrow tracking-[.1em] text-[var(--danger-text)]">Already registered</span>
+            <span className="text-[15px] text-[var(--text-2)]">
+              <span className="text-[var(--text)] font-semibold font-mono">{fullName}</span> is taken. Try another name.
+            </span>
           </div>
+        </div>
+      )}
+
+      {checkState === "available" && fullName && (
+        <div
+          className="bg-[var(--lime)] text-[var(--bg)] px-6 py-[22px] flex flex-col gap-4 rise"
+          style={{ clipPath: "polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)" }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-[18px]">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <span className="flex items-center gap-2 eyebrow font-semibold tracking-[.1em]">
+                <span className="w-[7px] h-[7px] rounded-full bg-[var(--bg)] pulse-fast" />
+                Available
+              </span>
+              <span className="font-mono text-[22px] font-semibold break-all">{fullName}</span>
+              <span className="text-[13px] font-medium">0.001 ETH · one-time · no renewals</span>
+            </div>
+            <button
+              className="btn btn-dark text-sm px-[22px] py-[15px]"
+              onClick={handleRegister}
+              disabled={isRegistering}
+            >
+              {isRegistering && <span className="w-[13px] h-[13px] spinner" />}
+              {registerLabel}
+            </button>
+          </div>
+
+          {txHash && isMining && (
+            <div className="pt-3 border-t border-[rgba(11,12,10,.2)] flex items-center gap-2 text-xs font-medium">
+              <span>Transaction submitted, waiting for confirmation…</span>
+              <a
+                href={`https://etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto inline-flex items-center gap-1 font-mono text-[var(--bg)] hover:text-[var(--bg)] underline"
+              >
+                View <ArrowNE />
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

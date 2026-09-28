@@ -1,6 +1,7 @@
 import { useReadContract } from "wagmi";
 import { formatEther } from "viem";
 import { ABI, REGISTRAR_ADDRESS } from "../lib/contract";
+import { ArrowNE } from "./ArrowNE";
 
 export function InfoGrid() {
   const { data: price } = useReadContract({
@@ -11,51 +12,62 @@ export function InfoGrid() {
 
   const stats = [
     {
-      label: "Registration Fee",
+      label: "Registration fee",
       value: price ? `${formatEther(price)} ETH` : "0.001 ETH",
       sub: "One-time, no renewals",
     },
     {
       label: "Standard",
       value: "ERC-8004",
-      sub: "Trustless Agents Standard",
+      sub: "Trustless Agents",
     },
     {
       label: "Contract",
       value: "Verified",
-      sub: "Ethereum Mainnet",
-      link: "https://etherscan.io/address/0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      sub: "Ethereum mainnet",
+      link: `https://etherscan.io/address/${REGISTRAR_ADDRESS}`,
     },
     {
       label: "Ownership",
-      value: "100% Yours",
+      value: "100%",
       sub: "Non-custodial, onchain",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="card p-4 flex flex-col gap-1 hover:border-[rgba(6,182,212,0.2)] transition-colors"
-        >
-          <p className="text-[#444] text-xs uppercase tracking-wider">{stat.label}</p>
-          {stat.link ? (
+    <section className="bg-[var(--lime)] text-[var(--bg)]">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-7 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+        {stats.map((stat, i) => {
+          const body = (
+            <>
+              <span className="eyebrow font-semibold">{stat.label}</span>
+              <span className="font-display font-bold text-[40px] leading-none inline-flex items-center gap-2">
+                {stat.value}
+                {stat.link && <ArrowNE className="text-[28px]" />}
+              </span>
+              <span className="text-[13px] font-medium">{stat.sub}</span>
+            </>
+          );
+          const cls = `py-[34px] px-6 flex flex-col gap-1.5 ${i === 0 ? "sm:pl-0" : ""} ${
+            i < stats.length - 1 ? "border-b sm:border-b-0 sm:border-r border-[rgba(11,12,10,.18)]" : ""
+          }`;
+          return stat.link ? (
             <a
+              key={stat.label}
               href={stat.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#06b6d4] font-bold text-sm hover:underline"
+              className={`${cls} text-[var(--bg)] hover:text-[var(--bg)] hover:bg-[var(--lime-press)] transition-colors`}
             >
-              {stat.value} ↗
+              {body}
             </a>
           ) : (
-            <p className="text-[#f0f0f0] font-bold text-sm">{stat.value}</p>
-          )}
-          <p className="text-[#333] text-xs">{stat.sub}</p>
-        </div>
-      ))}
-    </div>
+            <div key={stat.label} className={cls}>
+              {body}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

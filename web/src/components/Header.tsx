@@ -1,38 +1,90 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
+import { useAppKit } from "@reown/appkit/react";
+import { REGISTRAR_ADDRESS } from "../lib/contract";
+
+const NAV = [
+  { id: "register", label: "Register" },
+  { id: "recent", label: "Recent" },
+  { id: "x402", label: "x402" },
+  { id: "developers", label: "Developers" },
+];
+
+export function LogoMark() {
+  return (
+    <div className="flex items-center">
+      <div className="w-[18px] h-[18px] rounded-full bg-[var(--lime)]" />
+      <div className="w-[18px] h-[18px] rounded-full bg-[var(--bg)] border-2 border-[var(--lime)] -ml-[7px]" />
+      <div className="w-[18px] h-[18px] rounded-full bg-[var(--lime)] -ml-[7px]" />
+    </div>
+  );
+}
+
+export function WalletButton() {
+  const { address, isConnected } = useAccount();
+  const { open } = useAppKit();
+  return (
+    <button
+      type="button"
+      onClick={() => open(isConnected ? { view: "Account" } : undefined)}
+      className="btn btn-lime chamfer-10 px-[18px] py-[11px]"
+    >
+      {isConnected && address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect wallet"}
+    </button>
+  );
+}
+
+// Highlights the section currently under the header.
+function useActiveSection() {
+  const [active, setActive] = useState(NAV[0].id);
+  useEffect(() => {
+    const els = NAV.map((n) => document.getElementById(n.id)).filter((el): el is HTMLElement => !!el);
+    if (!els.length || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (hit) setActive(hit.target.id);
+      },
+      { rootMargin: "-80px 0px -55% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  return active;
+}
 
 export function Header() {
+  const active = useActiveSection();
   return (
-    <header className="sticky top-0 z-50 border-b border-[#1a1a2e] bg-[rgba(5,5,8,0.85)] backdrop-blur-md">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[rgba(6,182,212,0.1)] border border-[rgba(6,182,212,0.2)] flex items-center justify-center text-base">
-            🤖
+    <header className="sticky top-0 z-20 border-b border-[var(--hairline)] bg-[rgba(11,12,10,.82)] backdrop-blur-[14px]">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-7 py-4 flex items-center justify-between gap-5">
+        <a href="#top" className="flex items-center gap-3 text-[var(--text)] hover:text-[var(--text)]">
+          <LogoMark />
+          <div className="flex items-baseline gap-1.5 font-display">
+            <span className="font-bold text-[19px] tracking-[.02em] text-[var(--lime)]">AI-BOT</span>
+            <span className="font-semibold text-[15px] text-[var(--muted)]">.eth</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-base font-bold text-[#06b6d4]">ai-bot</span>
-            <span className="font-mono text-sm text-[#2a2a3e]">.eth</span>
-            <span className="font-mono text-xs text-[#444] hidden sm:inline">/ registrar</span>
-          </div>
-          <span className="tag tag-purple hidden sm:inline-flex">ERC-8004</span>
-        </div>
+        </a>
 
-        {/* Right */}
-        <div className="flex items-center gap-3">
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV.map((n) => (
+            <a key={n.id} href={`#${n.id}`} className={`nav-link ${active === n.id ? "active" : ""}`}>
+              {n.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-4">
           <a
-            href="https://etherscan.io/address/0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89"
+            href={`https://etherscan.io/address/${REGISTRAR_ADDRESS}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-xs text-[#444] hover:text-[#06b6d4] transition-colors"
+            className="hidden sm:flex items-center gap-2 font-mono text-xs text-[var(--muted)] hover:text-[var(--text)]"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+            <span className="w-[7px] h-[7px] rounded-full bg-[var(--lime)] pulse" />
             Mainnet
           </a>
-          <ConnectButton
-            showBalance={false}
-            chainStatus="none"
-            accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
-          />
+          <WalletButton />
         </div>
       </div>
     </header>

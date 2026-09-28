@@ -10,7 +10,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          wagmi: ["wagmi", "viem", "@rainbow-me/rainbowkit"],
+          wagmi: ["wagmi", "viem", "@reown/appkit", "@reown/appkit-adapter-wagmi"],
         },
       },
     },
