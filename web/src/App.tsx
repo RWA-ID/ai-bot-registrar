@@ -17,7 +17,7 @@ const STEPS = [
 const FOOTER_LINKS = [
   { label: "Contract", href: `https://etherscan.io/address/${REGISTRAR_ADDRESS}` },
   { label: "GitHub", href: "https://github.com/RWA-ID/ai-bot-registrar" },
-  { label: "@ai_bot_eth", href: "https://twitter.com/ai_bot_eth" },
+  { label: "@botnameservice", href: "https://x.com/botnameservice" },
   { label: "ENS Manager", href: "https://app.ens.domains/ai-bot.eth" },
 ];
 

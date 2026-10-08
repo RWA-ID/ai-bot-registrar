@@ -1,0 +1,73 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Bot Names",
+  "description": "Bot Names: permanent ENS identities for AI agents under ai-bot.eth. Register <name>.ai-bot.eth for 0.001 ETH. Fully on-chain and agent-first: the subdomain is owned by the caller immediately, with the resolver configured automatically.",
+  "image": "ipfs://bafkreig4ld75lloteqz2iwti2qskmshw7ckkujjcwfhhpjewzaug2dfncq",
+  "version": "1.1.0",
+  "tags": [
+    "ENS",
+    "identity",
+    "infrastructure",
+    "subdomain",
+    "registration",
+    "AI-agents",
+    "Web3",
+    "decentralized"
+  ],
+  "services": [
+    {
+      "name": "web",
+      "version": "v1",
+      "endpoint": "https://ai-bot.eth.limo"
+    },
+    {
+      "name": "ENS",
+      "version": "v1",
+      "endpoint": "ai-bot.eth"
+    },
+    {
+      "name": "registrar-contract",
+      "version": "v1",
+      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89"
+    },
+    {
+      "name": "register",
+      "version": "v1",
+      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "payable": true,
+      "returns": "bytes32",
+      "signature": "registerSubdomain(string)",
+      "description": "Registers <name>.ai-bot.eth to msg.sender"
+    },
+    {
+      "name": "availability",
+      "version": "v1",
+      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "returns": "bool",
+      "signature": "isSubdomainAvailable(string)"
+    },
+    {
+      "name": "price",
+      "version": "v1",
+      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "returns": "uint256",
+      "signature": "registrationPrice()"
+    }
+  ],
+  "agentType": "service",
+  "capabilities": [
+    "ens-subdomain-registration",
+    "identity-services",
+    "blockchain-infrastructure"
+  ],
+  "registrations": [
+    {
+      "agentId": 22605,
+      "agentRegistry": "eip155:1:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    }
+  ],
+  "supportedTrust": [
+    "reputation"
+  ],
+  "x402PaymentPointer": null
+}

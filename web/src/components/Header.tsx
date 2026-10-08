@@ -11,13 +11,7 @@ const NAV = [
 ];
 
 export function LogoMark() {
-  return (
-    <div className="flex items-center">
-      <div className="w-[18px] h-[18px] rounded-full bg-[var(--lime)]" />
-      <div className="w-[18px] h-[18px] rounded-full bg-[var(--bg)] border-2 border-[var(--lime)] -ml-[7px]" />
-      <div className="w-[18px] h-[18px] rounded-full bg-[var(--lime)] -ml-[7px]" />
-    </div>
-  );
+  return <img src="logo-mark.png" alt="" width={32} height={32} className="block w-8 h-8" />;
 }
 
 export function WalletButton() {

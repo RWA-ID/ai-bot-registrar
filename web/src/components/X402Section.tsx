@@ -47,9 +47,12 @@ export function X402Section() {
       <div className="relative grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] bg-[var(--surface)] border border-[var(--border)]">
         <div className="px-6 py-10 sm:px-10 sm:py-12 flex flex-col gap-[22px]">
           <span className="eyebrow text-[var(--lime)]">Also available</span>
-          <h2 className="h2">
-            x402 <span className="text-[var(--lime)]">identities</span>
-          </h2>
+          <div className="flex items-center gap-4">
+            <img src="x402-hub-logo.png" alt="" width={56} height={56} className="block w-14 h-14 shrink-0" />
+            <h2 className="h2">
+              x402 <span className="text-[var(--lime)]">Identity Hub</span>
+            </h2>
+          </div>
           <p className="m-0 text-base leading-relaxed text-[var(--text-2)] max-w-[460px]">
             Need a paid-agent identity? Claim a permanent subname designed for agents that accept x402
             micropayments.
@@ -60,7 +63,7 @@ export function X402Section() {
             rel="noopener noreferrer"
             className="self-start font-mono text-[13px] inline-flex items-center gap-1"
           >
-            About x402id <ArrowNE />
+            Visit x402 Identity Hub <ArrowNE />
           </a>
         </div>
 
