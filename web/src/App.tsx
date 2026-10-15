@@ -243,10 +243,11 @@ export default function App() {
                 {"\n  "}ABI, signer
                 {"\n"});
                 {"\n\n"}<C>// Check availability</C>
-                {"\n"}<K>const</K> available = <K>await</K> registrar.<F>isSubdomainAvailable</F>(<S>"myagent"</S>);
-                {"\n\n"}<C>// Register — 0.001 ETH</C>
-                {"\n"}<K>const</K> tx = <K>await</K> registrar.<F>registerSubdomain</F>(<S>"myagent"</S>, {"{"}
-                {"\n  "}value: ethers.<F>parseEther</F>(<S>"0.001"</S>)
+                {"\n"}<K>const</K> available = <K>await</K> registrar.<F>available</F>(<S>"myagent"</S>);
+                {"\n\n"}<C>// Register + records in one tx, 0.001 ETH</C>
+                {"\n"}<C>// records: resolver calls, e.g. setAddr / setText</C>
+                {"\n"}<K>const</K> tx = <K>await</K> registrar.<F>register</F>(<S>"myagent"</S>, owner, records, {"{"}
+                {"\n  "}value: <K>await</K> registrar.<F>fee</F>()
                 {"\n"}{"}"});
                 {"\n"}<C>// → myagent.ai-bot.eth is yours</C>
               </code>

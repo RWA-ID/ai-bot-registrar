@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { decodeEventLog, parseAbi } from "viem";
-import { REGISTRAR_ADDRESS, PARENT_DOMAIN } from "../lib/contract";
+import { decodeEventLog } from "viem";
+import { ABI, V1_ABI, REGISTRAR_ADDRESS, V1_REGISTRAR_ADDRESS, PARENT_DOMAIN } from "../lib/contract";
 import { ArrowNE } from "./ArrowNE";
 
 interface MintEvent {
@@ -12,9 +12,24 @@ interface MintEvent {
 
 const ETHERSCAN_KEY = import.meta.env.VITE_ETHERSCAN_KEY ?? "";
 
-const EVENT_ABI = parseAbi([
-  "event SubdomainRegistered(string subdomain, address indexed owner, bytes32 indexed label, bytes32 subnode, uint256 price, uint256 timestamp)",
-]);
+const EVENT_ABI = [...ABI, ...V1_ABI];
+
+interface EtherscanLog {
+  data: `0x${string}`;
+  topics: [`0x${string}`, ...`0x${string}`[]];
+  timeStamp: string;
+  transactionHash: string;
+}
+
+async function fetchLogs(address: string): Promise<EtherscanLog[]> {
+  const res = await fetch(
+    `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&address=${address}&fromBlock=0&toBlock=latest&apikey=${ETHERSCAN_KEY}`
+  );
+  const data = await res.json();
+  // "No records found" comes back as status 0 with an empty array
+  if (!Array.isArray(data.result)) throw new Error(String(data.result ?? data.message));
+  return data.result;
+}
 
 function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -37,36 +52,29 @@ export function RecentMints({ refreshKey }: { refreshKey: number }) {
     let cancelled = false;
     setLoading(true);
 
-    async function fetchLogs() {
+    async function load() {
       try {
-        const res = await fetch(
-          `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&address=${REGISTRAR_ADDRESS}&fromBlock=0&toBlock=latest&apikey=${ETHERSCAN_KEY}`
-        );
-        const data = await res.json();
-
+        // v1 first: both lists are oldest-first, so the concatenation is too
+        const all = [...(await fetchLogs(V1_REGISTRAR_ADDRESS)), ...(await fetchLogs(REGISTRAR_ADDRESS))];
         if (cancelled) return;
-        if (data.status !== "1" || !Array.isArray(data.result)) {
-          setLoading(false);
-          return;
-        }
 
         const logs: MintEvent[] = [];
-        for (const log of data.result) {
+        for (const log of all) {
           try {
-            const decoded = decodeEventLog({
-              abi: EVENT_ABI,
-              data: log.data,
-              topics: log.topics,
-            });
-            const args = decoded.args as { subdomain: string; owner: string; timestamp: bigint };
+            const decoded = decodeEventLog({ abi: EVENT_ABI, data: log.data, topics: log.topics });
+            const label =
+              decoded.eventName === "NameRegistered" ? decoded.args.label
+              : decoded.eventName === "SubdomainRegistered" ? decoded.args.subdomain
+              : null;
+            if (label === null || !("owner" in decoded.args)) continue;
             logs.push({
-              subdomain: args.subdomain,
-              owner: args.owner,
-              timestamp: args.timestamp,
+              subdomain: label,
+              owner: decoded.args.owner,
+              timestamp: BigInt(log.timeStamp),
               txHash: log.transactionHash,
             });
           } catch {
-            // skip undecodeable logs
+            // skip other events (fee updates, withdrawals)
           }
         }
 
@@ -80,7 +88,7 @@ export function RecentMints({ refreshKey }: { refreshKey: number }) {
       }
     }
 
-    fetchLogs();
+    load();
     return () => { cancelled = true; };
   }, [refreshKey]);
 

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useReadContracts, useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { useAppKit } from "@reown/appkit/react";
 import { ArrowNE } from "./ArrowNE";
-import { ABI, REGISTRAR_ADDRESS, NAME_WRAPPER_ADDRESS, NAME_WRAPPER_ABI, REGISTRATION_FEE, PARENT_DOMAIN, getSubnodeHash } from "../lib/contract";
+import { ABI, REGISTRAR_ADDRESS, REGISTRATION_FEE, PARENT_DOMAIN, isValidLabel, mintRecords } from "../lib/contract";
+import { isEmbeddedWallet } from "../lib/wagmi";
 
 type CheckState = "idle" | "checking" | "available" | "taken" | "invalid";
 
@@ -12,12 +14,10 @@ interface MintedInfo {
 }
 
 function sanitize(input: string) {
-  return input.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 32);
+  return input.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 63);
 }
 
-function isValid(name: string) {
-  return name.length >= 3 && /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(name);
-}
+const isValid = isValidLabel;
 
 function shortHash(hash: string) {
   return `${hash.slice(0, 10)}…${hash.slice(-8)}`;
@@ -29,49 +29,33 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
   const [checkState, setCheckState] = useState<CheckState>("idle");
   const [minted, setMinted] = useState<MintedInfo | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, connector } = useAccount();
   const { open: openConnectModal } = useAppKit();
 
   const enabled = query.length >= 3 && isValid(query);
 
+  // available() checks the NameWrapper and the registry, so it also covers v1's names
   const { data: contractData, isFetching, isError } = useReadContracts({
     contracts: [
-      {
-        address: REGISTRAR_ADDRESS,
-        abi: ABI,
-        functionName: "isSubdomainAvailable",
-        args: [query],
-      },
-      {
-        address: NAME_WRAPPER_ADDRESS,
-        abi: NAME_WRAPPER_ABI,
-        functionName: "ownerOf",
-        args: [enabled ? getSubnodeHash(query) : 0n],
-      },
+      { address: REGISTRAR_ADDRESS, abi: ABI, functionName: "available", args: [query] },
+      { address: REGISTRAR_ADDRESS, abi: ABI, functionName: "fee" },
     ],
     query: { enabled, retry: 2 },
   });
 
-  const registrarSaysAvailable = contractData?.[0]?.status === "success"
-    ? (contractData[0].result as boolean)
-    : undefined;
-  const wrapperOwner = contractData?.[1]?.status === "success"
-    ? (contractData[1].result as `0x${string}`)
-    : undefined;
-  const wrapperSaysTaken =
-    wrapperOwner !== undefined &&
-    wrapperOwner !== "0x0000000000000000000000000000000000000000";
+  // A failed read is "unknown", never "taken"
+  const isAvailable = contractData?.[0]?.status === "success" ? contractData[0].result : undefined;
+  const fee = contractData?.[1]?.status === "success" ? contractData[1].result : REGISTRATION_FEE;
 
-  const isAvailable =
-    registrarSaysAvailable === undefined && wrapperOwner === undefined
-      ? undefined
-      : !wrapperSaysTaken && registrarSaysAvailable === true;
+  const { writeContract, data: txHash, isPending, error: writeError, reset } = useWriteContract();
 
-  const { writeContract, data: txHash, isPending, reset } = useWriteContract();
-
-  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+  const { data: receipt, isLoading: isMining } = useWaitForTransactionReceipt({
     hash: txHash,
+    chainId: mainnet.id,
   });
+  // A mined receipt can still be a revert; only "success" means the name exists
+  const isConfirmed = receipt?.status === "success";
+  const isReverted = receipt?.status === "reverted";
 
   // Capture name + hash BEFORE resetting state
   useEffect(() => {
@@ -126,12 +110,17 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
       openConnectModal();
       return;
     }
+    if (!address) return;
     writeContract({
       address: REGISTRAR_ADDRESS,
       abi: ABI,
-      functionName: "registerSubdomain",
-      args: [query],
-      value: REGISTRATION_FEE,
+      functionName: "register",
+      // The minting wallet becomes the name's Ethereum and Base address in the same tx
+      args: [query, address, mintRecords(query, address)],
+      value: fee,
+      // wagmi turns chainId into viem's `chain` (no chainId = null). Other wallets get the
+      // mainnet check; an embedded (email/social) wallet rejects a write that names a chain.
+      ...(isEmbeddedWallet(connector?.id) ? {} : { chainId: mainnet.id }),
     });
   };
 
@@ -217,7 +206,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="yourbot"
-            maxLength={32}
+            maxLength={63}
             spellCheck={false}
             autoComplete="off"
             autoCapitalize="off"
@@ -249,7 +238,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
 
       {checkState === "invalid" && input.length > 0 && (
         <div className="px-[18px] py-3.5 border border-[rgba(255,107,87,.35)] bg-[rgba(255,107,87,.06)] text-[var(--danger-text)] text-sm leading-normal rise">
-          Names must be 3–32 characters: letters, numbers and hyphens. No leading or trailing hyphen.
+          Names must be 3–63 characters: letters, numbers and hyphens. No leading or trailing hyphen.
         </div>
       )}
 
@@ -288,6 +277,30 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
               {registerLabel}
             </button>
           </div>
+
+          <p className="m-0 text-[12px] font-medium">
+            Your wallet becomes this name&apos;s Ethereum and Base address.
+          </p>
+
+          {isReverted && txHash && (
+            <div className="pt-3 border-t border-[rgba(11,12,10,.2)] flex items-center gap-2 text-xs font-semibold">
+              <span>The transaction failed onchain. Nothing was registered.</span>
+              <a
+                href={`https://etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto inline-flex items-center gap-1 font-mono text-[var(--bg)] hover:text-[var(--bg)] underline"
+              >
+                View <ArrowNE />
+              </a>
+            </div>
+          )}
+
+          {writeError && !txHash && (
+            <div className="pt-3 border-t border-[rgba(11,12,10,.2)] text-xs font-semibold">
+              {writeError.message.includes("rejected") ? "Request cancelled in wallet." : "The wallet could not send the transaction."}
+            </div>
+          )}
 
           {txHash && isMining && (
             <div className="pt-3 border-t border-[rgba(11,12,10,.2)] flex items-center gap-2 text-xs font-medium">

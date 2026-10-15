@@ -7,7 +7,7 @@ export function InfoGrid() {
   const { data: price } = useReadContract({
     address: REGISTRAR_ADDRESS,
     abi: ABI,
-    functionName: "registrationPrice",
+    functionName: "fee",
   });
 
   const stats = [
