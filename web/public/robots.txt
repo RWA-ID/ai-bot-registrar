@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ai-bot.eth.link/sitemap.xml
+Sitemap: https://botnames.dev/sitemap.xml

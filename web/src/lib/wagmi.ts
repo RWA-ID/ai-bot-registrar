@@ -30,11 +30,12 @@ createAppKit({
   networks,
   projectId: PROJECT_ID,
   metadata: {
-    name: "AI Bot Registrar",
-    description: "ENS subdomains for AI agents under ai-bot.eth",
-    url: "https://ai-bot.eth.link",
+    name: "Bot Names",
+    description: "Names for AI agents: <name>.ai-bot.eth for wallets and websites",
+    // The same build serves botnames.dev and ai-bot.eth.limo; WalletConnect checks the URL against the page
+    url: typeof window !== "undefined" ? window.location.origin : "https://botnames.dev",
     // Wallets draw this small and square beside the signing prompt — keep it a square PNG.
-    icons: ["https://ai-bot.eth.link/app-icon.png"],
+    icons: ["https://botnames.dev/app-icon.png"],
   },
   features: {
     analytics: false,

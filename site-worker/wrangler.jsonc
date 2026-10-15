@@ -1,0 +1,20 @@
+{
+  "name": "botnames-site",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  // The site is the Vite build in ../web (npm run build -> web/dist). The same dist/ is
+  // pinned to IPFS for ai-bot.eth (ai-bot.eth.limo); this worker is the web2 copy.
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+    // Run the worker first so www redirects instead of serving a copy.
+    "run_worker_first": true
+  },
+  "routes": [
+    { "pattern": "botnames.dev", "custom_domain": true },
+    { "pattern": "www.botnames.dev", "custom_domain": true }
+  ],
+  "workers_dev": true
+}

@@ -1,0 +1,37 @@
+# Bot Names
+
+> Names for AI agents: <label>.ai-bot.eth on ENS. One name is the agent's wallet address on Bitcoin, Solana, Ethereum, every EVM chain and 100+ other coins (every coin the ENS address encoder supports), its public profile (avatar, description, socials, Nostr key) and the address of its own website on IPFS. Names are ERC-1155 tokens the owner can transfer; the parent cannot revoke them.
+
+An agent can do everything itself through the Bot Names MCP server. Bot Names never holds keys or funds: every write is returned as an unsigned transaction {chain_id, to, value, data} for the agent's own wallet (Coinbase AgentKit, MetaMask's agent wallet, or any wallet that can send a raw transaction) to sign.
+
+## MCP server
+
+- URL: https://mcp.botnames.dev/mcp
+- Transport: Streamable HTTP, no auth
+- Claude Code: `claude mcp add --transport http botnames https://mcp.botnames.dev/mcp`
+
+## Tools
+
+- check_name: is <label>.ai-bot.eth free, and what it costs
+- register_name: one Ethereum transaction registers the name and writes its records; the owner becomes its Ethereum and Base address unless set otherwise
+- set_records: addresses (btc, sol, ethereum, base, arbitrum, optimism, polygon, any "evm:<chainId>", "evm" for all EVM chains, ltc, doge and other ENS coins), avatar and text records, website (contenthash)
+- set_primary_name: make wallets and explorers show the name instead of the 0x address (Ethereum, and Base via ENSIP-19); sent from the address being named
+- deploy_site: pin a static website (index.html + assets, up to 10 MB) to IPFS; returns the transaction that points the name at it, live at https://<label>.ai-bot.eth.limo
+- resolve: any ENS name's addresses and records, or an address's primary name
+- list_names: the Bot Names a wallet holds
+
+## Prices
+
+- Name: 0.001 ETH on Ethereum mainnet, one-time, plus gas. No renewal fees.
+- Website: $0.25 per deploy in USDC on Base, via x402 or a plain USDC transfer. Charged only when the deploy succeeds.
+
+## Contracts
+
+- Registrar: 0x52bf7D9A2F50ED9707c573FEAC708716E49B4275 (Ethereum mainnet, verified). register(label, owner, records) mints <label>.ai-bot.eth with PARENT_CANNOT_CONTROL burned, so the parent can never revoke it.
+- Source: https://github.com/RWA-ID/ai-bot-registrar
+
+## Links
+
+- Site: https://botnames.dev (IPFS mirror: https://ai-bot.eth.limo)
+- X: https://x.com/botnameservice
+- Abuse and takedown reports: abuse@botnames.dev

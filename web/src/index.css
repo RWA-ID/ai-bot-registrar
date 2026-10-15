@@ -203,3 +203,14 @@ input::placeholder {
 .x402-host .x402id-root[data-theme="dark"] .x402id-link { color: var(--bg); font-weight: 600; }
 .x402-host .x402id-root[data-theme="dark"] .x402id-btn:focus-visible { outline: 2px solid var(--bg); outline-offset: 2px; }
 .x402-host .x402id-root[data-theme="dark"] .x402id-btn:focus:not(:focus-visible) { outline: none; }
+
+/* Legal pages */
+.legal { color: var(--text-2); font-size: 15.5px; line-height: 1.75; }
+.legal h2 { font-family: var(--display); font-weight: 700; text-transform: uppercase; color: var(--text); font-size: 21px; letter-spacing: .01em; margin: 40px 0 12px; }
+.legal p { margin: 0 0 14px; }
+.legal ul { margin: 0 0 14px; padding-left: 20px; }
+.legal li { margin: 0 0 10px; }
+.legal li::marker { color: var(--lime); }
+.legal strong { color: var(--text); font-weight: 600; }
+.legal a { color: var(--lime); text-decoration: underline; text-underline-offset: 3px; }
+.legal a:hover { color: var(--text); }

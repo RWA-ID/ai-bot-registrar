@@ -4,9 +4,10 @@ import { useAppKit } from "@reown/appkit/react";
 import { REGISTRAR_ADDRESS } from "../lib/contract";
 
 const NAV = [
-  { id: "register", label: "Register" },
+  { id: "features", label: "Features" },
+  { id: "agents", label: "Agents" },
+  { id: "sites", label: "Websites" },
   { id: "recent", label: "Recent" },
-  { id: "x402", label: "x402" },
   { id: "developers", label: "Developers" },
 ];
 
@@ -30,7 +31,7 @@ export function WalletButton() {
 
 // Highlights the section currently under the header.
 function useActiveSection() {
-  const [active, setActive] = useState(NAV[0].id);
+  const [active, setActive] = useState("");
   useEffect(() => {
     const els = NAV.map((n) => document.getElementById(n.id)).filter((el): el is HTMLElement => !!el);
     if (!els.length || typeof IntersectionObserver === "undefined") return;
@@ -55,8 +56,8 @@ export function Header() {
         <a href="#top" className="flex items-center gap-3 text-[var(--text)] hover:text-[var(--text)]">
           <LogoMark />
           <div className="flex items-baseline gap-1.5 font-display">
-            <span className="font-bold text-[19px] tracking-[.02em] text-[var(--lime)]">AI-BOT</span>
-            <span className="font-semibold text-[15px] text-[var(--muted)]">.eth</span>
+            <span className="font-bold text-[19px] tracking-[.02em] text-[var(--lime)]">BOT</span>
+            <span className="font-bold text-[19px] tracking-[.02em] text-[var(--text)]">NAMES</span>
           </div>
         </a>
 

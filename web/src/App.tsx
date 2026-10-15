@@ -5,19 +5,24 @@ import { MyNames } from "./components/MyNames";
 import { RecentMints } from "./components/RecentMints";
 import { InfoGrid } from "./components/InfoGrid";
 import { X402Section } from "./components/X402Section";
+import { AgentsSection, CopyText, MCP_URL } from "./components/AgentsSection";
+import { SitesSection } from "./components/SitesSection";
+import { FeaturesSection } from "./components/FeaturesSection";
 import { ArrowNE } from "./components/ArrowNE";
 import { REGISTRAR_ADDRESS } from "./lib/contract";
+import { OPERATOR } from "./lib/legal";
 
 const STEPS = [
-  { step: "01", title: "Search", desc: "Type any name to instantly check availability on ai-bot.eth." },
-  { step: "02", title: "Register", desc: "Connect your wallet, pay 0.001 ETH, and claim your subdomain onchain." },
-  { step: "03", title: "Own it", desc: "A permanent ENS identity. Set records, link profiles, get discovered." },
+  { step: "01", title: "Search", desc: "Pick a name for your bot and check it instantly: mybot.ai-bot.eth." },
+  { step: "02", title: "Register", desc: "One transaction, 0.001 ETH. Your wallet becomes the name's Ethereum and Base address." },
+  { step: "03", title: "Use it", desc: "Add Bitcoin, Solana and any EVM chain, an avatar and a website. The name is yours; nobody can revoke it." },
 ];
 
 const FOOTER_LINKS = [
   { label: "Contract", href: `https://etherscan.io/address/${REGISTRAR_ADDRESS}` },
   { label: "GitHub", href: "https://github.com/RWA-ID/ai-bot-registrar" },
   { label: "@botnameservice", href: "https://x.com/botnameservice" },
+  { label: "MCP server", href: "https://mcp.botnames.dev" },
   { label: "ENS Manager", href: "https://app.ens.domains/ai-bot.eth" },
 ];
 
@@ -30,24 +35,6 @@ function Tag({ children, lime }: { children: React.ReactNode; lime?: boolean }) 
     >
       {children}
     </span>
-  );
-}
-
-function CopyAddress() {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(REGISTRAR_ADDRESS).catch(() => {});
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1400);
-      }}
-      className="flex items-center justify-between gap-3 px-4 py-3.5 bg-[var(--surface)] border border-[var(--border-strong)] hover:border-[var(--lime)] text-[var(--text)] font-mono text-[13px] cursor-pointer text-left break-all transition-colors"
-    >
-      <span>{REGISTRAR_ADDRESS}</span>
-      <span className="text-[var(--lime)] shrink-0 text-xs">{copied ? "Copied" : "Copy"}</span>
-    </button>
   );
 }
 
@@ -82,21 +69,22 @@ export default function App() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--lime)] pulse" />
                 Live on Ethereum
               </Tag>
+              <Tag>MCP for agents</Tag>
               <Tag>ERC-8004 Compatible</Tag>
-              <Tag>No Renewals</Tag>
             </div>
 
             <h1
               className="m-0 font-display font-bold uppercase text-[clamp(44px,6.2vw,82px)] leading-[.98] tracking-[-.01em]"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Give your AI bot <span className="text-[var(--lime)]">an ENS identity</span>
+              One name for your <span className="text-[var(--lime)]">bot&apos;s wallets</span> and website
             </h1>
 
             <p className="m-0 text-lg leading-relaxed text-[var(--text-2)] max-w-[520px]">
-              Register a permanent subdomain under{" "}
-              <span className="font-mono text-[var(--text)]">ai-bot.eth</span>. Fully onchain, ERC-8004 compatible,
-              discoverable by any agent.
+              Give your bot superpowers with an onchain identity.{" "}
+              <span className="font-mono text-[var(--text)]">mybot.ai-bot.eth</span> is its wallet address on Bitcoin,
+              Solana, Ethereum, every EVM chain and 100+ coins, and the URL of its own website. Register here, or let
+              your agent do it over MCP.
             </p>
 
             <div className="max-w-[600px]">
@@ -139,6 +127,8 @@ export default function App() {
         {/* Stats band */}
         <InfoGrid />
 
+        <FeaturesSection />
+
         {/* How it works */}
         <section className="max-w-[1240px] mx-auto px-4 sm:px-7 pt-20 sm:pt-28 pb-10 flex flex-col gap-12">
           <div className="flex flex-wrap justify-between items-end gap-6">
@@ -146,7 +136,7 @@ export default function App() {
               How it <span className="text-[var(--lime)]">works</span>
             </h2>
             <p className="m-0 max-w-[380px] text-[15px] leading-relaxed text-[var(--text-2)]">
-              Three steps, one transaction. No subscriptions, no expiry reminders.
+              Three steps, one transaction. A one-time fee, no renewal fees.
             </p>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-0.5 bg-[var(--hairline)]">
@@ -197,6 +187,10 @@ export default function App() {
           </div>
         </section>
 
+        <AgentsSection />
+
+        <SitesSection />
+
         {/* x402 */}
         <X402Section />
 
@@ -211,11 +205,13 @@ export default function App() {
               Register <span className="text-[var(--lime)]">programmatically</span>
             </h2>
             <p className="m-0 text-base leading-relaxed text-[var(--text-2)] max-w-[440px]">
-              Agents can autonomously claim their ENS identity by calling the contract directly.
+              Or call the contract directly: one <span className="font-mono">register</span> creates the name and
+              writes its records. The MCP server at <span className="font-mono">{MCP_URL.replace("https://", "")}</span>{" "}
+              builds these transactions for you.
             </p>
             <div className="flex flex-col gap-2">
               <span className="font-mono text-[11px] tracking-[.1em] uppercase text-[var(--muted)]">Registrar contract</span>
-              <CopyAddress />
+              <CopyText text={REGISTRAR_ADDRESS} />
             </div>
             <a
               href={`https://etherscan.io/address/${REGISTRAR_ADDRESS}#writeContract`}
@@ -261,10 +257,15 @@ export default function App() {
         <div className="max-w-[1240px] mx-auto px-4 sm:px-7 pt-10 pb-12 flex flex-wrap justify-between items-end gap-7">
           <div className="flex flex-col gap-1.5">
             <span className="font-display font-bold text-[clamp(40px,7vw,96px)] leading-[.9] text-[#1a1d17] tracking-[-.01em]">
-              AI-BOT.ETH
+              BOT NAMES
             </span>
             <span className="font-mono text-xs text-[var(--muted)]">
-              ENS subdomains for AI agents · Unaudited, use at your own risk
+              Names for AI agents on ai-bot.eth · Operated by {OPERATOR.LEGAL_NAME} · Contracts unaudited, use at your own risk
+            </span>
+            <span className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs">
+              <a href="terms/" className="link-muted">Terms</a>
+              <a href="privacy/" className="link-muted">Privacy</a>
+              <a href="disclaimer/" className="link-muted">Disclaimer</a>
             </span>
           </div>
           <div className="flex flex-wrap gap-[22px] font-mono text-xs">

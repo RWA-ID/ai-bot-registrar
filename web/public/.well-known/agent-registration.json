@@ -1,24 +1,30 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Bot Names",
-  "description": "Bot Names: permanent ENS identities for AI agents under ai-bot.eth. Register <name>.ai-bot.eth for 0.001 ETH. Fully on-chain and agent-first: the subdomain is owned by the caller immediately, with the resolver configured automatically.",
+  "description": "Bot Names gives AI agents an onchain identity: <name>.ai-bot.eth on ENS for 0.001 ETH. One name is the agent's wallet address on Bitcoin, Solana, Ethereum, every EVM chain and 100+ coins, its public profile, its primary name in wallets, and the address of its own website on IPFS ($0.25 per deploy). Agents do it all themselves over MCP at https://mcp.botnames.dev/mcp with their own wallet; names are minted with PARENT_CANNOT_CONTROL burned, so the parent can never revoke them.",
   "image": "ipfs://bafkreig4ld75lloteqz2iwti2qskmshw7ckkujjcwfhhpjewzaug2dfncq",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "tags": [
     "ENS",
     "identity",
-    "infrastructure",
-    "subdomain",
-    "registration",
     "AI-agents",
-    "Web3",
-    "decentralized"
+    "MCP",
+    "multichain-address",
+    "primary-name",
+    "IPFS-hosting",
+    "x402"
   ],
   "services": [
     {
       "name": "web",
       "version": "v1",
-      "endpoint": "https://ai-bot.eth.limo"
+      "endpoint": "https://botnames.dev"
+    },
+    {
+      "name": "MCP",
+      "version": "2025-06-18",
+      "endpoint": "https://mcp.botnames.dev/mcp",
+      "description": "Streamable HTTP, no auth. Tools: check_name, register_name, set_records, set_primary_name, deploy_site, resolve, list_names. Writes are returned as unsigned transactions for the agent's own wallet."
     },
     {
       "name": "ENS",
@@ -27,38 +33,40 @@
     },
     {
       "name": "registrar-contract",
-      "version": "v1",
-      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89"
+      "version": "v2",
+      "endpoint": "eip155:1:0x52bf7D9A2F50ED9707c573FEAC708716E49B4275"
     },
     {
       "name": "register",
-      "version": "v1",
-      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "version": "v2",
+      "endpoint": "eip155:1:0x52bf7D9A2F50ED9707c573FEAC708716E49B4275",
       "payable": true,
       "returns": "bytes32",
-      "signature": "registerSubdomain(string)",
-      "description": "Registers <name>.ai-bot.eth to msg.sender"
+      "signature": "register(string,address,bytes[])",
+      "description": "Registers <label>.ai-bot.eth to owner and runs the resolver calls in records for it, in one transaction. Value: fee()."
     },
     {
       "name": "availability",
-      "version": "v1",
-      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "version": "v2",
+      "endpoint": "eip155:1:0x52bf7D9A2F50ED9707c573FEAC708716E49B4275",
       "returns": "bool",
-      "signature": "isSubdomainAvailable(string)"
+      "signature": "available(string)"
     },
     {
       "name": "price",
-      "version": "v1",
-      "endpoint": "eip155:1:0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89",
+      "version": "v2",
+      "endpoint": "eip155:1:0x52bf7D9A2F50ED9707c573FEAC708716E49B4275",
       "returns": "uint256",
-      "signature": "registrationPrice()"
+      "signature": "fee()"
     }
   ],
   "agentType": "service",
   "capabilities": [
     "ens-subdomain-registration",
-    "identity-services",
-    "blockchain-infrastructure"
+    "multichain-address-records",
+    "primary-name",
+    "ipfs-website-hosting",
+    "identity-services"
   ],
   "registrations": [
     {
@@ -69,5 +77,5 @@
   "supportedTrust": [
     "reputation"
   ],
-  "x402PaymentPointer": null
+  "x402Support": true
 }

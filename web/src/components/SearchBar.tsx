@@ -135,15 +135,15 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
 
   // Success screen
   if (minted) {
-    const shareText = `Just registered ${minted.name} — a permanent ENS identity for AI agents on @ai_bot_eth 🤖\n\nNo renewals. Fully onchain. Built on @ensdomains.\n\n`;
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent("https://ai-bot.eth.link")}`;
+    const shareText = `My bot just got its name: ${minted.name}. One name for its wallets and website, via @botnameservice on @ensdomains.\n\n`;
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent("https://botnames.dev")}`;
 
     return (
       <div className="border border-[var(--lime)] bg-[var(--surface)] p-[26px] flex flex-col gap-5 rise">
         <div className="flex flex-col gap-2">
           <span className="eyebrow text-[var(--lime)]">Registration successful</span>
           <span className="font-display font-bold text-[30px] break-all">{minted.name}</span>
-          <span className="text-sm text-[var(--text-2)]">Your agent now has a permanent ENS identity on Ethereum.</span>
+          <span className="text-sm text-[var(--text-2)]">It&apos;s already your wallet&apos;s Ethereum and Base address. Add more chains, an avatar or a website in the ENS Manager or over MCP.</span>
         </div>
 
         <div className="flex justify-between items-center gap-3 px-4 py-3 bg-[var(--bg)] border border-[var(--border)] font-mono text-[13px]">
@@ -232,7 +232,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
           <span className="text-[#3a3e34]">/</span>
           <span>Instant</span>
           <span className="text-[#3a3e34]">/</span>
-          <span>Yours forever</span>
+          <span>Can&apos;t be revoked</span>
         </div>
       )}
 
@@ -266,7 +266,7 @@ export function SearchBar({ onRegistered }: { onRegistered?: () => void }) {
                 Available
               </span>
               <span className="font-mono text-[22px] font-semibold break-all">{fullName}</span>
-              <span className="text-[13px] font-medium">0.001 ETH · one-time · no renewals</span>
+              <span className="text-[13px] font-medium">0.001 ETH · one-time · no renewal fees</span>
             </div>
             <button
               className="btn btn-dark text-sm px-[22px] py-[15px]"

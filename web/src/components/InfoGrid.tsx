@@ -14,12 +14,12 @@ export function InfoGrid() {
     {
       label: "Registration fee",
       value: price ? `${formatEther(price)} ETH` : "0.001 ETH",
-      sub: "One-time, no renewals",
+      sub: "One-time, no renewal fees",
     },
     {
-      label: "Standard",
-      value: "ERC-8004",
-      sub: "Trustless Agents",
+      label: "Website",
+      value: "$0.25",
+      sub: "Per deploy, USDC on Base",
     },
     {
       label: "Contract",
@@ -30,7 +30,7 @@ export function InfoGrid() {
     {
       label: "Ownership",
       value: "100%",
-      sub: "Non-custodial, onchain",
+      sub: "The parent can't revoke it",
     },
   ];
 
