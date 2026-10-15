@@ -8,6 +8,7 @@ import { X402Section } from "./components/X402Section";
 import { AgentsSection, CopyText, MCP_URL } from "./components/AgentsSection";
 import { SitesSection } from "./components/SitesSection";
 import { FeaturesSection } from "./components/FeaturesSection";
+import { PayBoxSection } from "./components/PayBoxSection";
 import { ArrowNE } from "./components/ArrowNE";
 import { REGISTRAR_ADDRESS } from "./lib/contract";
 import { OPERATOR } from "./lib/legal";
@@ -188,6 +189,8 @@ export default function App() {
         </section>
 
         <AgentsSection />
+
+        <PayBoxSection />
 
         <SitesSection />
 

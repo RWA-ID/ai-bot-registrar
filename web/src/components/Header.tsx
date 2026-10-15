@@ -6,6 +6,7 @@ import { REGISTRAR_ADDRESS } from "../lib/contract";
 const NAV = [
   { id: "features", label: "Features" },
   { id: "agents", label: "Agents" },
+  { id: "paybox", label: "PayBox" },
   { id: "sites", label: "Websites" },
   { id: "recent", label: "Recent" },
   { id: "developers", label: "Developers" },

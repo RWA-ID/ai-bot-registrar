@@ -57,7 +57,19 @@ claude mcp add --transport http botnames https://mcp.botnames.dev/mcp
 }
 ```
 
+**Claude app / Grok:** Settings → Connectors → Add custom connector, URL `https://mcp.botnames.dev/mcp`, no OAuth.
+
 **Any other MCP client:** add a remote server with URL `https://mcp.botnames.dev/mcp`, transport Streamable HTTP, no authentication.
+
+### Use with PayBox
+
+[PayBox](https://paybox.sh) by MoonPay is a non-custodial wallet for Claude, ChatGPT and Grok. Add it next to the Bot Names connector:
+
+1. Bot Names prepares each transaction.
+2. PayBox signs it after your approval.
+3. `send_transaction` broadcasts it (PayBox signs without sending).
+
+Verified end to end: [firstbot.ai-bot.eth](https://firstbot.ai-bot.eth.limo) was registered from Claude with a PayBox wallet, and its website was published and paid for in the same chat.
 
 ### Tools
 
@@ -68,6 +80,7 @@ claude mcp add --transport http botnames https://mcp.botnames.dev/mcp
 | `set_records` | Addresses, text, avatar or website for a name you own. Adds a `setResolver` transaction first for older names that lack one. Pass `from` to check ownership. | 1–2 tx, Ethereum |
 | `set_primary_name` | Makes wallets and explorers show the name for an address, on Ethereum and optionally Base (ENSIP-19). Refuses unless the name already resolves to that address there. | 1 tx per chain |
 | `deploy_site` | Pins a static site to IPFS and returns the transaction that points the name at it | payment + 1 tx |
+| `send_transaction` | For wallets that only sign: broadcasts a signed transaction Bot Names prepared (registrar, ENS NameWrapper/PublicResolver/reverse registrars, or the USDC site payment to the Safe) and waits for the receipt. Not a general relay. | broadcast |
 | `resolve` | Any ENS name's addresses (decoded to each coin's own format), text, website, owner, expiry and `parent_can_control`; or an address's primary name | read |
 | `list_names` | The Bot Names an address holds | read |
 

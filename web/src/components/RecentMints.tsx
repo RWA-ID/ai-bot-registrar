@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { decodeEventLog } from "viem";
 import { ABI, V1_ABI, REGISTRAR_ADDRESS, V1_REGISTRAR_ADDRESS, PARENT_DOMAIN } from "../lib/contract";
+import { etherscanLogs } from "../lib/etherscan";
 import { ArrowNE } from "./ArrowNE";
 
 interface MintEvent {
@@ -10,7 +11,6 @@ interface MintEvent {
   txHash: string;
 }
 
-const ETHERSCAN_KEY = import.meta.env.VITE_ETHERSCAN_KEY ?? "";
 
 const EVENT_ABI = [...ABI, ...V1_ABI];
 
@@ -21,14 +21,8 @@ interface EtherscanLog {
   transactionHash: string;
 }
 
-async function fetchLogs(address: string): Promise<EtherscanLog[]> {
-  const res = await fetch(
-    `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&address=${address}&fromBlock=0&toBlock=latest&apikey=${ETHERSCAN_KEY}`
-  );
-  const data = await res.json();
-  // "No records found" comes back as status 0 with an empty array
-  if (!Array.isArray(data.result)) throw new Error(String(data.result ?? data.message));
-  return data.result;
+function fetchLogs(address: string): Promise<EtherscanLog[]> {
+  return etherscanLogs<EtherscanLog>(`address=${address}&fromBlock=0&toBlock=latest`);
 }
 
 function shortAddr(addr: string) {

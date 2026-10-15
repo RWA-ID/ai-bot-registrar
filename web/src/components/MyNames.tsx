@@ -13,18 +13,15 @@ import {
   getSubnodeHash,
 } from "../lib/contract";
 import { ArrowNE } from "./ArrowNE";
-
-const ETHERSCAN_KEY = import.meta.env.VITE_ETHERSCAN_KEY ?? "";
+import { etherscanLogs } from "../lib/etherscan";
 
 /** Labels v2 registered to `owner` (NameRegistered: topic2 = owner). */
 async function fetchV2Labels(owner: string): Promise<string[]> {
-  const res = await fetch(
-    `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&address=${REGISTRAR_ADDRESS}&fromBlock=0&toBlock=latest&topic2=${pad(owner as `0x${string}`)}&apikey=${ETHERSCAN_KEY}`
+  const result = await etherscanLogs<{ data: `0x${string}`; topics: [`0x${string}`, ...`0x${string}`[]] }>(
+    `address=${REGISTRAR_ADDRESS}&fromBlock=0&toBlock=latest&topic2=${pad(owner as `0x${string}`)}`
   );
-  const data = await res.json();
-  if (!Array.isArray(data.result)) return [];
   const labels: string[] = [];
-  for (const log of data.result) {
+  for (const log of result) {
     try {
       const { args } = decodeEventLog({ abi: ABI, eventName: "NameRegistered", data: log.data, topics: log.topics });
       labels.push(args.label);

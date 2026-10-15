@@ -46,7 +46,8 @@ const WALLETS = [
   { label: "MetaMask agent wallet", href: "https://github.com/MetaMask/agent-skills" },
 ];
 
-export function CopyText({ text, label }: { text: string; label?: string }) {
+/** `prose` wraps at word boundaries; the default breaks anywhere, for long addresses and URLs. */
+export function CopyText({ text, label, prose }: { text: string; label?: string; prose?: boolean }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -56,7 +57,7 @@ export function CopyText({ text, label }: { text: string; label?: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1400);
       }}
-      className="flex items-center justify-between gap-3 px-4 py-3.5 bg-[var(--surface)] border border-[var(--border-strong)] hover:border-[var(--lime)] text-[var(--text)] font-mono text-[13px] cursor-pointer text-left break-all transition-colors"
+      className={`flex items-center justify-between gap-3 px-4 py-3.5 bg-[var(--surface)] border border-[var(--border-strong)] hover:border-[var(--lime)] text-[var(--text)] font-mono text-[13px] cursor-pointer text-left ${prose ? "break-words leading-relaxed" : "break-all"} transition-colors`}
     >
       <span>{label ?? text}</span>
       <span className="text-[var(--lime)] shrink-0 text-xs">{copied ? "Copied" : "Copy"}</span>

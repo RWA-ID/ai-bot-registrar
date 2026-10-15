@@ -93,8 +93,8 @@ function Terms() {
         are created by the {BRAND} registrar smart contract on Ethereum mainnet ({REGISTRAR}).
       </p>
       <p>
-        We are an independent operator. We are not affiliated with or endorsed by ENS Labs, the ENS DAO, xAI, Coinbase,
-        MetaMask, Pinata, eth.limo or any other third party named on the Site, and we are not a bank, broker, exchange,
+        We are an independent operator. We are not affiliated with or endorsed by ENS Labs, the ENS DAO, xAI, Anthropic,
+        Coinbase, MetaMask, MoonPay, Pinata, eth.limo or any other third party named on the Site, and we are not a bank, broker, exchange,
         custodian or money transmitter.
       </p>
 
@@ -389,8 +389,8 @@ function Disclaimer() {
 
       <h2>No affiliation</h2>
       <p>
-        {BRAND} is independent. ENS, Ethereum, Base, Bitcoin, Solana, IPFS, Grok, xAI, Coinbase, AgentKit, MetaMask and
-        other names are trademarks of their owners and are used only to describe compatibility. Their use does not imply
+        {BRAND} is independent. ENS, Ethereum, Base, Bitcoin, Solana, IPFS, Grok, xAI, Claude, Anthropic, Coinbase,
+        AgentKit, MetaMask, MoonPay, PayBox and other names are trademarks of their owners and are used only to describe compatibility. Their use does not imply
         endorsement.
       </p>
 
