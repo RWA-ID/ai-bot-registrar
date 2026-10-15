@@ -1,0 +1,26 @@
+{
+  "name": "botnames-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // @coinbase/x402 reads process.env and signs CDP JWTs with node crypto.
+  "compatibility_flags": ["nodejs_compat"],
+  // KEEP workers_dev true. An MCP URL lives in other people's client configs; a hostname
+  // is only ever ADDED (mcp.botnames.dev), never retired.
+  "workers_dev": true,
+  "routes": [{ "pattern": "mcp.botnames.dev", "custom_domain": true }],
+  "kv_namespaces": [
+    // site deploy history, used payment tx hashes, takedowns
+    { "binding": "SITES", "id": "REPLACE_WITH_KV_ID" }
+  ],
+  "vars": {
+    // Bot Names Safe (2-of-3, same address on Ethereum and Base): receives site payments
+    "SAFE_ADDRESS": "0x5707Ad7526cF369bEa7af8732A7Af91d3e231C4e",
+    "PUBLIC_URL": "https://botnames.dev"
+  }
+  // Secrets (wrangler secret put …), never in vars - a var re-applied on deploy shadows a secret:
+  //   MAINNET_RPC_URL, BASE_RPC_URL  - keyed RPCs (public ones throttle Workers' shared IPs)
+  //   ETHERSCAN_API_KEY              - list_names log scan
+  //   PINATA_JWT                     - site pinning (scopes: pinFileToIPFS, unpin)
+  //   CDP_API_KEY_ID, CDP_API_KEY_SECRET - x402 facilitator on Base
+  //   ADMIN_TOKEN                    - POST /admin/takedown
+}
