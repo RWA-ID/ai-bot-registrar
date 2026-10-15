@@ -39,6 +39,27 @@ export default {
       return json(await takedown(env, cid, reason ?? "takedown"));
     }
 
+    // The robot mark, so clients that show a connector icon from the server's domain find one
+    if (["/favicon.ico", "/favicon.png", "/icon.png", "/apple-touch-icon.png"].includes(url.pathname)) {
+      const icon = await fetch("https://botnames.dev/app-icon.png", { cf: { cacheTtl: 86400, cacheEverything: true } });
+      return new Response(icon.body, {
+        status: icon.status,
+        headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+
+    if ((url.pathname === "/" || url.pathname === "") && (req.headers.get("accept") ?? "").includes("text/html")) {
+      return new Response(
+        `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Bot Names MCP</title>
+<link rel="icon" type="image/png" href="/favicon.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui;background:#0b0c0a;color:#f2f4ec;padding:40px;line-height:1.6">
+<h1 style="color:#c8f53c">Bot Names MCP</h1><p>MCP endpoint: <code>https://${url.host}/mcp</code> (Streamable HTTP, no auth)</p>
+<p><a style="color:#c8f53c" href="${env.PUBLIC_URL}">${env.PUBLIC_URL}</a></p></body></html>`,
+        { headers: { "Content-Type": "text/html; charset=utf-8" } }
+      );
+    }
+
     if (url.pathname === "/" || url.pathname === "") {
       return json({
         name: "Bot Names MCP",
@@ -46,7 +67,7 @@ export default {
         mcp: `https://${url.host}/mcp`,
         transport: "streamable-http",
         about: "Names for AI agents (<name>.ai-bot.eth): one name as the bot's wallet address on Bitcoin, Solana, Ethereum and every EVM chain, plus its own website on IPFS.",
-        tools: ["check_name", "register_name", "set_records", "set_primary_name", "resolve", "list_names", "deploy_site"],
+        tools: ["check_name", "register_name", "set_records", "set_primary_name", "deploy_site", "send_transaction", "resolve", "list_names"],
         site: env.PUBLIC_URL,
       });
     }

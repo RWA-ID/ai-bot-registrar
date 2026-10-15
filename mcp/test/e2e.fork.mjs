@@ -4,6 +4,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createTestClient, http, publicActions, walletActions, keccak256, encodeAbiParameters, pad, toHex } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { base, mainnet } from "viem/chains";
 import assert from "node:assert/strict";
 
@@ -43,7 +44,7 @@ for (const a of [AGENT, STRANGER]) {
 }
 
 const tools = (await client.listTools()).tools.map((t) => t.name).sort();
-assert.deepEqual(tools, ["check_name", "deploy_site", "list_names", "register_name", "resolve", "set_primary_name", "set_records"]);
+assert.deepEqual(tools, ["check_name", "deploy_site", "list_names", "register_name", "resolve", "send_transaction", "set_primary_name", "set_records"]);
 step(`tools: ${tools.join(", ")}`);
 
 let r = await call("check_name", { name: label });
@@ -149,6 +150,24 @@ await eth.setBalance({ address: klumpOwner, value: 10n ** 18n });
 for (const t of r.data.transactions) await send(eth, klumpOwner, t);
 assert.equal((await call("resolve", { query: "klumpai.ai-bot.eth" })).data.text.description, "hi");
 step("v1 name without a resolver: setResolver + records, in order");
+
+// A signing-only wallet (like PayBox): sign locally, let Bot Names broadcast
+// A fresh key: anvil's well-known keys are real mainnet addresses, some carrying EIP-7702 code
+// that rejects the ERC-1155 name transfer
+const signer = privateKeyToAccount(generatePrivateKey());
+await eth.setBalance({ address: signer.address, value: 10n ** 18n });
+const label2 = `${label}-signed`;
+r = await call("register_name", { name: label2, owner: signer.address });
+const t = r.data.transaction;
+const prepared = await eth.prepareTransactionRequest({ account: signer, to: t.to, data: t.data, value: BigInt(t.value), chain: eth.chain });
+const signed = await signer.signTransaction(prepared);
+r = await call("send_transaction", { signed_transaction: signed });
+assert.equal(r.data.status, "success", JSON.stringify(r.data));
+assert.equal((await call("resolve", { query: `${label2}.ai-bot.eth` })).data.owner.toLowerCase(), signer.address.toLowerCase());
+const stray = await signer.signTransaction(await eth.prepareTransactionRequest({ account: signer, to: STRANGER, value: 1n, chain: eth.chain }));
+r = await call("send_transaction", { signed_transaction: stray });
+assert.ok(r.isError && /only broadcasts its own/.test(r.data.error), JSON.stringify(r.data));
+step("send_transaction: a locally signed register broadcast and mined; a stray transfer refused");
 
 r = await call("resolve", { query: "vitalik.eth" });
 assert.match(r.data.addresses.ethereum, /^0x/);

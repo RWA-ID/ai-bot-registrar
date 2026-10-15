@@ -1,9 +1,22 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { encodeFunctionData, formatEther, getAddress, isAddress, namehash, type Address, type Hex, type PublicClient } from "viem";
+import {
+  decodeFunctionData,
+  encodeFunctionData,
+  formatEther,
+  getAddress,
+  isAddress,
+  isHex,
+  keccak256,
+  namehash,
+  parseTransaction,
+  type Address,
+  type Hex,
+  type PublicClient,
+} from "viem";
 import { z } from "zod";
-import { findOwnResolver, getNameState, listNames, lookupName, mainnetClient, parseName } from "./chain.ts";
+import { baseClient, findOwnResolver, getNameState, listNames, lookupName, mainnetClient, parseName } from "./chain.ts";
 import {
   NAME_WRAPPER,
   NAME_WRAPPER_ABI,
@@ -12,7 +25,9 @@ import {
   REGISTRAR,
   REGISTRAR_ABI,
   RESOLVER_ABI,
+  ERC20_ABI,
   L2_REVERSE_REGISTRAR_BASE,
+  USDC_BASE,
   REVERSE_REGISTRAR,
   REVERSE_REGISTRAR_ABI,
   SITE_PRICE_USD,
@@ -32,6 +47,7 @@ Flow:
 3. deploy_site - pins a static website (index.html + assets) to IPFS for ${SITE_PRICE_USD} in USDC on Base, then returns the transaction that points the name at it. The site is then live at https://<name>.limo.
 4. set_records - change addresses, avatar, text or website later.
 5. set_primary_name - make wallets and explorers show the name instead of the 0x address.
+If your wallet only signs (it returns a signed transaction instead of sending it), pass the signed transaction to send_transaction and Bot Names broadcasts it.
 resolve and list_names read any time, free.
 
 Bot Names never holds keys or funds. Every write is returned as an unsigned transaction {chain_id, to, value, data} for your wallet to sign: Coinbase AgentKit, MetaMask's agent wallet, or any wallet that can send a raw transaction. Your wallet needs ETH on Ethereum mainnet for registration and records, and USDC on Base for websites.
@@ -125,7 +141,13 @@ function guard(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
 
 export function createServer(env: Env): McpServer {
   const server = new McpServer(
-    { name: "bot-names", title: "Bot Names", version: VERSION, websiteUrl: env.PUBLIC_URL },
+    {
+      name: "bot-names",
+      title: "Bot Names",
+      version: VERSION,
+      websiteUrl: env.PUBLIC_URL,
+      icons: [{ src: "https://botnames.dev/app-icon.png", mimeType: "image/png", sizes: ["512x512"] }],
+    },
     { instructions: INSTRUCTIONS, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() }
   );
   const client = mainnetClient(env);
@@ -276,6 +298,64 @@ export function createServer(env: Env): McpServer {
           transactions: txs,
           next: `Send each transaction FROM ${addr} on its chain (chain_id). The reverse record is set for whoever sends it. Then resolve ${addr} returns ${full}.`,
         });
+      })
+  );
+
+  server.registerTool(
+    "send_transaction",
+    {
+      title: "Broadcast a signed transaction",
+      description:
+        "For wallets that only sign: pass the signed raw transaction (0x…) of a transaction Bot Names prepared and it is broadcast on Ethereum or Base. Only transactions to the Bot Names registrar, the ENS NameWrapper, PublicResolver and reverse registrars, or a USDC payment to the Bot Names Safe on Base are accepted. Waits for the receipt and reports its status.",
+      inputSchema: {
+        signed_transaction: z.string().describe("The signed raw transaction, 0x-prefixed hex"),
+      },
+      annotations: { readOnlyHint: false, openWorldHint: true },
+    },
+    ({ signed_transaction }) =>
+      guard(async () => {
+        const raw = signed_transaction.trim() as Hex;
+        if (!isHex(raw) || raw.length < 100) return fail("signed_transaction must be a signed raw transaction in 0x-prefixed hex.");
+        let parsed;
+        try {
+          parsed = parseTransaction(raw);
+        } catch {
+          return fail("That is not a valid signed transaction.");
+        }
+        if (!parsed.r || !parsed.s) return fail("The transaction is not signed.");
+        const chainId = parsed.chainId ?? 0;
+        const to = parsed.to ? getAddress(parsed.to) : null;
+        // Not a general relay: only the transactions this server prepares
+        const allowed =
+          (chainId === 1 && !!to && [REGISTRAR, NAME_WRAPPER, PUBLIC_RESOLVER, REVERSE_REGISTRAR].map(getAddress).includes(to)) ||
+          (chainId === 8453 && to === getAddress(L2_REVERSE_REGISTRAR_BASE)) ||
+          (chainId === 8453 && to === getAddress(USDC_BASE) && isSafePayment(parsed.data, env.SAFE_ADDRESS));
+        if (!allowed) {
+          return fail(`Bot Names only broadcasts its own transactions (registrar, ENS NameWrapper, PublicResolver, reverse registrars, or the USDC site payment). Send this one with your wallet. chain_id ${chainId}, to ${to}.`);
+        }
+        const chainClient = chainId === 1 ? client : baseClient(env);
+        const hash = keccak256(raw);
+        try {
+          await chainClient.request({ method: "eth_sendRawTransaction", params: [raw] });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
+          // Already in the mempool or mined (e.g. a retry): fall through and look for the receipt
+          if (!/already known|known transaction|nonce too low/i.test(msg)) return fail(`The node rejected the transaction: ${msg}`, { hash });
+        }
+        const explorer = chainId === 1 ? `https://etherscan.io/tx/${hash}` : `https://basescan.org/tx/${hash}`;
+        try {
+          const receipt = await chainClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
+          return ok({
+            hash,
+            chain_id: chainId,
+            status: receipt.status,
+            block: Number(receipt.blockNumber),
+            explorer,
+            ...(receipt.status === "success" ? {} : { error: "The transaction was mined but reverted." }),
+          });
+        } catch {
+          return ok({ hash, chain_id: chainId, status: "pending", explorer, next: "Broadcast; not mined within 90 s. Check the explorer link." });
+        }
       })
   );
 
@@ -432,6 +512,16 @@ export function createServer(env: Env): McpServer {
   );
 
   return server;
+}
+
+function isSafePayment(data: Hex | undefined, safe: Address): boolean {
+  if (!data) return false;
+  try {
+    const call = decodeFunctionData({ abi: ERC20_ABI, data });
+    return call.functionName === "transfer" && getAddress(call.args[0]) === getAddress(safe);
+  } catch {
+    return false;
+  }
 }
 
 export { takedown };
