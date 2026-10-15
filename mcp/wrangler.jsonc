@@ -10,7 +10,7 @@
   "routes": [{ "pattern": "mcp.botnames.dev", "custom_domain": true }],
   "kv_namespaces": [
     // site deploy history, used payment tx hashes, takedowns
-    { "binding": "SITES", "id": "REPLACE_WITH_KV_ID" }
+    { "binding": "SITES", "id": "46b4355f86f84a4f949aba3e99e99c7b" }
   ],
   "vars": {
     // Bot Names Safe (2-of-3, same address on Ethereum and Base): receives site payments
