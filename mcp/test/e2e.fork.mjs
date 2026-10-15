@@ -43,7 +43,7 @@ for (const a of [AGENT, STRANGER]) {
 }
 
 const tools = (await client.listTools()).tools.map((t) => t.name).sort();
-assert.deepEqual(tools, ["check_name", "deploy_site", "list_names", "register_name", "resolve", "set_records"]);
+assert.deepEqual(tools, ["check_name", "deploy_site", "list_names", "register_name", "resolve", "set_primary_name", "set_records"]);
 step(`tools: ${tools.join(", ")}`);
 
 let r = await call("check_name", { name: label });
@@ -78,6 +78,22 @@ assert.equal(r.data.text.description, "e2e test bot");
 assert.equal(r.data.parent_can_control, false);
 assert.deepEqual(r.data.errors, {});
 step("resolve: ETH, Base, Arbitrum, BTC, SOL, text all read back; parent cannot control");
+
+r = await call("set_primary_name", { name, address: STRANGER, chains: ["ethereum", "base"] });
+assert.ok(r.isError && /does not resolve/.test(r.data.error), JSON.stringify(r.data));
+r = await call("set_primary_name", { name, address: AGENT, chains: ["ethereum", "base"] });
+assert.equal(r.data.transactions.length, 2, JSON.stringify(r.data));
+await send(eth, AGENT, r.data.transactions.find((t) => t.chain_id === 1));
+await send(bas, AGENT, r.data.transactions.find((t) => t.chain_id === 8453));
+assert.equal((await call("resolve", { query: AGENT })).data.primary_name, name);
+const l2Name = await bas.readContract({
+  address: "0x0000000000D8e504002cC26E3Ec46D81971C1664",
+  abi: [{ type: "function", name: "nameForAddr", stateMutability: "view", inputs: [{ name: "addr", type: "address" }], outputs: [{ type: "string" }] }],
+  functionName: "nameForAddr",
+  args: [AGENT],
+});
+assert.equal(l2Name, name);
+step("set_primary_name: refused for a wallet the name doesn't resolve to; set + read back on Ethereum and Base");
 
 r = await call("set_records", { name, from: STRANGER, records: { text: { url: "https://evil.example" } } });
 assert.ok(r.isError && /does not own/.test(r.data.error));

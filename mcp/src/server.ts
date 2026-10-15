@@ -12,6 +12,9 @@ import {
   REGISTRAR,
   REGISTRAR_ABI,
   RESOLVER_ABI,
+  L2_REVERSE_REGISTRAR_BASE,
+  REVERSE_REGISTRAR,
+  REVERSE_REGISTRAR_ABI,
   SITE_PRICE_USD,
   type Env,
 } from "./config.ts";
@@ -21,13 +24,14 @@ import { isTakenDown, pinSite, prepareSite, recordVersion, SiteError, takedown, 
 
 export const VERSION = "0.1.0";
 
-const INSTRUCTIONS = `Bot Names gives an AI agent a name like mybot.${PARENT}: one name that works as its wallet address on Bitcoin, Solana, Ethereum and every EVM chain, and as the address of its own website.
+const INSTRUCTIONS = `Bot Names gives an AI agent a name like mybot.${PARENT}: one name that works as its wallet address on Bitcoin, Solana, Ethereum, every EVM chain and 100+ other coins, as its public profile (avatar, description, socials), and as the address of its own website.
 
 Flow:
 1. check_name - is the name free, and what does it cost (0.001 ETH + gas on Ethereum mainnet).
 2. register_name - returns an unsigned Ethereum transaction. It registers the name AND writes its records (addresses, avatar, text) in one go. Sign and send it with your own wallet.
 3. deploy_site - pins a static website (index.html + assets) to IPFS for ${SITE_PRICE_USD} in USDC on Base, then returns the transaction that points the name at it. The site is then live at https://<name>.limo.
 4. set_records - change addresses, avatar, text or website later.
+5. set_primary_name - make wallets and explorers show the name instead of the 0x address.
 resolve and list_names read any time, free.
 
 Bot Names never holds keys or funds. Every write is returned as an unsigned transaction {chain_id, to, value, data} for your wallet to sign: Coinbase AgentKit, MetaMask's agent wallet, or any wallet that can send a raw transaction. Your wallet needs ETH on Ethereum mainnet for registration and records, and USDC on Base for websites.
@@ -226,6 +230,52 @@ export function createServer(env: Env): McpServer {
         }
         const { txs, writes } = await recordTxs(client, full, records);
         return ok({ name: full, owner: state.owner, transactions: txs, records: writes, next: `Send the transaction${txs.length > 1 ? "s in order" : ""} from ${state.owner} on Ethereum mainnet.` });
+      })
+  );
+
+  server.registerTool(
+    "set_primary_name",
+    {
+      title: "Set a primary name",
+      description: `Make wallets, block explorers and apps show a name (e.g. mybot.${PARENT}) instead of an 0x address. Returns one transaction per chain, sent FROM the address being named: Ethereum mainnet, and optionally Base (ENSIP-19 L2 primary name). The name must already resolve to that address on each chain; set it with set_records first if not.`,
+      inputSchema: {
+        name: z.string().describe(`"mybot", "mybot.${PARENT}" or any ENS name`),
+        address: z.string().describe("The wallet to name. It must send the transactions."),
+        chains: z.array(z.enum(["ethereum", "base"])).optional().describe('Default ["ethereum"]. Add "base" for a primary name on Base too.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    ({ name, address, chains }) =>
+      guard(async () => {
+        let full: string;
+        try {
+          full = parseName(name).name;
+        } catch {
+          return fail(`"${name}" is not a valid ENS name`);
+        }
+        const addr = asAddress(address, "address");
+        const wanted = [...new Set(chains?.length ? chains : ["ethereum" as const])];
+        const targets = {
+          ethereum: { chainId: 1, coinType: 60n, registrar: REVERSE_REGISTRAR, label: "Ethereum" },
+          base: { chainId: 8453, coinType: 0x80000000n | 8453n, registrar: L2_REVERSE_REGISTRAR_BASE, label: "Base" },
+        };
+        // A primary name only shows when forward and reverse agree: the name must resolve to addr there
+        const forward = await Promise.all(wanted.map((c) => client.getEnsAddress({ name: full, coinType: targets[c].coinType })));
+        const mismatched = wanted.filter((c, i) => forward[i]?.toLowerCase() !== addr.toLowerCase());
+        if (mismatched.length) {
+          return fail(
+            `${full} does not resolve to ${addr} on ${mismatched.map((c) => targets[c].label).join(" and ")}, so wallets would ignore the primary name. Set it first with set_records, e.g. {"addresses": {${mismatched.map((c) => `"${c}": "${addr}"`).join(", ")}}}.`,
+            { forward: Object.fromEntries(wanted.map((c, i) => [c, forward[i] ?? null])) }
+          );
+        }
+        const data = encodeFunctionData({ abi: REVERSE_REGISTRAR_ABI, functionName: "setName", args: [full] });
+        const txs = wanted.map((c) => tx(targets[c].chainId, targets[c].registrar, data, 0n, `Set ${addr}'s primary name on ${targets[c].label} to ${full}`));
+        return ok({
+          name: full,
+          address: addr,
+          transactions: txs,
+          next: `Send each transaction FROM ${addr} on its chain (chain_id). The reverse record is set for whoever sends it. Then resolve ${addr} returns ${full}.`,
+        });
       })
   );
 

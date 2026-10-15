@@ -46,7 +46,7 @@ export default {
         mcp: `https://${url.host}/mcp`,
         transport: "streamable-http",
         about: "Names for AI agents (<name>.ai-bot.eth): one name as the bot's wallet address on Bitcoin, Solana, Ethereum and every EVM chain, plus its own website on IPFS.",
-        tools: ["check_name", "register_name", "set_records", "resolve", "list_names", "deploy_site"],
+        tools: ["check_name", "register_name", "set_records", "set_primary_name", "resolve", "list_names", "deploy_site"],
         site: env.PUBLIC_URL,
       });
     }

@@ -26,6 +26,11 @@ export const NAME_WRAPPER = "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401" as cons
 export const UNIVERSAL_RESOLVER = "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe" as const;
 export const PUBLIC_RESOLVER = "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63" as const;
 
+/** ENS Reverse Registrar (mainnet; owns addr.reverse) and the ENSIP-19 L2 reverse registrar (Base). */
+export const REVERSE_REGISTRAR = "0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb" as const;
+export const L2_REVERSE_REGISTRAR_BASE = "0x0000000000D8e504002cC26E3Ec46D81971C1664" as const;
+export const REVERSE_REGISTRAR_ABI = parseAbi(["function setName(string name) returns (bytes32)"]);
+
 export const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
 export const BASE_NETWORK = "eip155:8453" as const;
 export const SITE_PRICE_USD = "$0.25";
