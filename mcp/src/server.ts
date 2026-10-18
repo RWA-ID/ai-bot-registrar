@@ -11,6 +11,8 @@ import {
   keccak256,
   namehash,
   parseTransaction,
+  recoverTransactionAddress,
+  type TransactionSerialized,
   type Address,
   type Hex,
   type PublicClient,
@@ -36,8 +38,10 @@ import {
 import { claimPaymentTx, getPaidWrapper, PaymentError, sitePaymentTx, x402Payer } from "./payment.ts";
 import { encodeRecords, RecordError, type RecordsInput } from "./records.ts";
 import { isTakenDown, pinSite, prepareSite, recordVersion, SiteError, takedown, type SiteFile } from "./sites.ts";
+import { completeTxs, type PreparedTx } from "./complete.ts";
+import { CARD_CSP, CARD_HTML, CARD_MIME, CARD_URI, type Card } from "./card.ts";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.0";
 
 const INSTRUCTIONS = `Bot Names gives an AI agent a name like mybot.${PARENT}: one name that works as its wallet address on Bitcoin, Solana, Ethereum, every EVM chain and 100+ other coins, as its public profile (avatar, description, socials), and as the address of its own website.
 
@@ -47,7 +51,7 @@ Flow:
 3. deploy_site - pins a static website (index.html + assets) to IPFS for ${SITE_PRICE_USD} in USDC on Base, then returns the transaction that points the name at it. The site is then live at https://<name>.limo.
 4. set_records - change addresses, avatar, text or website later.
 5. set_primary_name - make wallets and explorers show the name instead of the 0x address.
-If your wallet only signs (it returns a signed transaction instead of sending it), pass the signed transaction to send_transaction and Bot Names broadcasts it.
+Every transaction also carries a complete \`transaction\` object (nonce, gas, fees, chainId) for its sender. With PayBox: pass it unchanged to request_wallet_sign as {op: "transaction", transaction}; don't look anything up or change it. PayBox signs without broadcasting, so pass the signed transaction to send_transaction and wait for status "success" before the next one. If send_transaction says the nonce or fees are stale, call the same tool again for fresh transactions.
 resolve and list_names read any time, free.
 
 Bot Names never holds keys or funds. Every write is returned as an unsigned transaction {chain_id, to, value, data} for your wallet to sign: Coinbase AgentKit, MetaMask's agent wallet, or any wallet that can send a raw transaction. Your wallet needs ETH on Ethereum mainnet for registration and records, and USDC on Base for websites.
@@ -81,6 +85,17 @@ function fail(message: string, extra: Record<string, unknown> = {}): CallToolRes
 
 function tx(chainId: number, to: Address, data: Hex, value: bigint, description: string) {
   return { chain_id: chainId, to, value: value.toString(), value_eth: formatEther(value), data, description };
+}
+
+/** Write tools render the Bot Names card in hosts that support MCP Apps. */
+const CARD_META = { ui: { resourceUri: CARD_URI }, "ui/resourceUri": CARD_URI, "openai/outputTemplate": CARD_URI };
+
+function card(c: Omit<Card, "steps"> & { txs: PreparedTx[] }): Card {
+  const { txs, ...rest } = c;
+  return {
+    ...rest,
+    steps: txs.map((t) => `${t.description}. ${t.chain_id === 8453 ? "Base" : "Ethereum"} transaction${t.value !== "0" ? `, ${formatEther(BigInt(t.value))} ETH` : ""}.`),
+  };
 }
 
 function asAddress(input: string, field: string): Address {
@@ -152,6 +167,13 @@ export function createServer(env: Env): McpServer {
   );
   const client = mainnetClient(env);
 
+  server.registerResource(
+    "action-card",
+    CARD_URI,
+    { title: "Bot Names action card", mimeType: CARD_MIME, _meta: { ui: { csp: CARD_CSP, prefersBorder: false } } },
+    async () => ({ contents: [{ uri: CARD_URI, mimeType: CARD_MIME, text: CARD_HTML, _meta: { ui: { csp: CARD_CSP, prefersBorder: false } } }] })
+  );
+
   server.registerTool(
     "check_name",
     {
@@ -189,9 +211,10 @@ export function createServer(env: Env): McpServer {
         name: z.string().describe(`"mybot" or "mybot.${PARENT}"`),
         owner: z.string().describe("Address that will own the name (usually your own wallet)"),
         records: RecordsSchema.optional(),
-        from: z.string().optional().describe("The wallet that will send the transaction. If given, the transaction is simulated and its gas estimated."),
+        from: z.string().optional().describe("The wallet that will send the transaction (default: owner). The transaction is completed for it (nonce, gas, fees); if given, it is also simulated."),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: CARD_META,
     },
     ({ name, owner, records, from }) =>
       guard(async () => {
@@ -205,13 +228,28 @@ export function createServer(env: Env): McpServer {
 
         const { calls, writes } = encodeRecords(namehash(full), records ?? {}, { ethereum: ownerAddr, base: ownerAddr });
         const data = encodeFunctionData({ abi: REGISTRAR_ABI, functionName: "register", args: [label, ownerAddr, calls] });
+        const transaction: PreparedTx = tx(1, REGISTRAR, data, fee, `Register ${full} to ${ownerAddr} and write ${writes.length} record(s)`);
+        const sender = from ? asAddress(from, "from") : ownerAddr;
+        await completeTxs(env, sender, [transaction]);
         const out: Record<string, unknown> = {
           name: full,
-          transaction: tx(1, REGISTRAR, data, fee, `Register ${full} to ${ownerAddr} and write ${writes.length} record(s)`),
+          transaction,
           records: writes,
+          card: card({
+            action: "register",
+            name: full,
+            wallet: sender,
+            rows: [
+              ["Owner", ownerAddr],
+              ["Records", String(writes.length)],
+              ["Price", `${formatEther(fee)} ETH + gas`],
+            ],
+            warnings: [],
+            url: `${env.PUBLIC_URL}`,
+            txs: [transaction],
+          }),
         };
         if (from) {
-          const sender = asAddress(from, "from");
           try {
             const [gas, price] = await Promise.all([
               client.estimateGas({ account: sender, to: REGISTRAR, data, value: fee }),
@@ -235,9 +273,10 @@ export function createServer(env: Env): McpServer {
       inputSchema: {
         name: z.string().describe(`"mybot" or "mybot.${PARENT}"`),
         records: RecordsSchema,
-        from: z.string().optional().describe("The wallet that will send it; checked against the name's owner."),
+        from: z.string().optional().describe("The wallet that will send it (default: the owner); checked against the name's owner."),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: CARD_META,
     },
     ({ name, records, from }) =>
       guard(async () => {
@@ -251,7 +290,24 @@ export function createServer(env: Env): McpServer {
           }
         }
         const { txs, writes } = await recordTxs(client, full, records);
-        return ok({ name: full, owner: state.owner, transactions: txs, records: writes, next: `Send the transaction${txs.length > 1 ? "s in order" : ""} from ${state.owner} on Ethereum mainnet.` });
+        const sender = from ? asAddress(from, "from") : state.owner;
+        await completeTxs(env, sender, txs);
+        return ok({
+          name: full,
+          owner: state.owner,
+          transactions: txs,
+          records: writes,
+          next: `Send the transaction${txs.length > 1 ? "s in order" : ""} from ${sender} on Ethereum mainnet.`,
+          card: card({
+            action: "records",
+            name: full,
+            wallet: sender,
+            rows: [["Records to write", String(writes.length)]],
+            warnings: [],
+            url: `https://${full}.limo`,
+            txs,
+          }),
+        });
       })
   );
 
@@ -266,6 +322,7 @@ export function createServer(env: Env): McpServer {
         chains: z.array(z.enum(["ethereum", "base"])).optional().describe('Default ["ethereum"]. Add "base" for a primary name on Base too.'),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: CARD_META,
     },
     ({ name, address, chains }) =>
       guard(async () => {
@@ -291,11 +348,21 @@ export function createServer(env: Env): McpServer {
           );
         }
         const data = encodeFunctionData({ abi: REVERSE_REGISTRAR_ABI, functionName: "setName", args: [full] });
-        const txs = wanted.map((c) => tx(targets[c].chainId, targets[c].registrar, data, 0n, `Set ${addr}'s primary name on ${targets[c].label} to ${full}`));
+        const txs: PreparedTx[] = wanted.map((c) => tx(targets[c].chainId, targets[c].registrar, data, 0n, `Set ${addr}'s primary name on ${targets[c].label} to ${full}`));
+        await completeTxs(env, addr, txs);
         return ok({
           name: full,
           address: addr,
           transactions: txs,
+          card: card({
+            action: "primary",
+            name: full,
+            wallet: addr,
+            rows: [["Chains", wanted.map((c) => targets[c].label).join(" + ")]],
+            warnings: [],
+            url: `https://${full}.limo`,
+            txs,
+          }),
           next: `Send each transaction FROM ${addr} on its chain (chain_id). The reverse record is set for whoever sends it. Then resolve ${addr} returns ${full}.`,
         });
       })
@@ -327,9 +394,12 @@ export function createServer(env: Env): McpServer {
         const to = parsed.to ? getAddress(parsed.to) : null;
         // Not a general relay: only the transactions this server prepares
         const allowed =
-          (chainId === 1 && !!to && [REGISTRAR, NAME_WRAPPER, PUBLIC_RESOLVER, REVERSE_REGISTRAR].map(getAddress).includes(to)) ||
-          (chainId === 8453 && to === getAddress(L2_REVERSE_REGISTRAR_BASE)) ||
-          (chainId === 8453 && to === getAddress(USDC_BASE) && isSafePayment(parsed.data, env.SAFE_ADDRESS));
+          // Compare lowercase. Never `.map(getAddress)`: map passes the index as getAddress's chainId,
+          // which turns on EIP-1191 checksums - every entry after the first then never matched, and
+          // only registrations were ever relayed (records, primary names and sites were refused).
+          (chainId === 1 && !!to && [REGISTRAR, NAME_WRAPPER, PUBLIC_RESOLVER, REVERSE_REGISTRAR].some((a) => a.toLowerCase() === to.toLowerCase())) ||
+          (chainId === 8453 && to?.toLowerCase() === L2_REVERSE_REGISTRAR_BASE.toLowerCase()) ||
+          (chainId === 8453 && to?.toLowerCase() === USDC_BASE.toLowerCase() && isSafePayment(parsed.data, env.SAFE_ADDRESS));
         if (!allowed) {
           return fail(`Bot Names only broadcasts its own transactions (registrar, ENS NameWrapper, PublicResolver, reverse registrars, or the USDC site payment). Send this one with your wallet. chain_id ${chainId}, to ${to}.`);
         }
@@ -339,8 +409,25 @@ export function createServer(env: Env): McpServer {
           await chainClient.request({ method: "eth_sendRawTransaction", params: [raw] });
         } catch (e) {
           const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
-          // Already in the mempool or mined (e.g. a retry): fall through and look for the receipt
-          if (!/already known|known transaction|nonce too low/i.test(msg)) return fail(`The node rejected the transaction: ${msg}`, { hash });
+          // Already in the mempool (a retry): fall through and look for the receipt. "nonce too low" is
+          // only a retry if this exact transaction exists; otherwise the transaction went stale and
+          // waiting 90 s for a receipt that can never come helps nobody.
+          // Node wording varies (anvil: "Transaction creation failed."), so also ask the chain: a
+          // nonce below the sender's mined count can never be included.
+          const usedNonce = await recoverTransactionAddress({ serializedTransaction: raw as TransactionSerialized })
+            .then((sender) => chainClient.getTransactionCount({ address: sender, blockTag: "latest" }))
+            .then((mined) => parsed.nonce !== undefined && parsed.nonce < mined)
+            .catch(() => false);
+          const stale = usedNonce || /nonce too low|replacement transaction underpriced|max fee per gas less than block base fee|fee cap less than block base fee/i.test(msg);
+          const known = /already known|known transaction/i.test(msg) || (stale && (await chainClient.getTransaction({ hash }).catch(() => null)));
+          if (!known) {
+            return fail(
+              stale
+                ? "This transaction went stale (its nonce was used, or network fees rose past its cap). Call the same tool again for a fresh one and sign that."
+                : `The node rejected the transaction: ${msg}`,
+              { hash }
+            );
+          }
         }
         const explorer = chainId === 1 ? `https://etherscan.io/tx/${hash}` : `https://basescan.org/tx/${hash}`;
         try {
@@ -434,6 +521,7 @@ export function createServer(env: Env): McpServer {
       description: `Publish a static website for a Bot Name you own, pinned on IPFS, for ${SITE_PRICE_USD} in USDC on Base. Payment: x402 if your client supports it, otherwise call once without payment_tx, sign and send the USDC transfer it returns, then call again with payment_tx. The paying wallet must be the name's owner or one of its Ethereum/Base addresses. Returns the IPFS CID and the transaction that sets the name's website; after it confirms the site is live at https://<name>.limo. You are only charged when the deploy succeeds.`,
       inputSchema: deployInput,
       annotations: { readOnlyHint: false, openWorldHint: true },
+      _meta: CARD_META,
     },
     async (args, extra) =>
       guard(async () => {
@@ -461,6 +549,7 @@ export function createServer(env: Env): McpServer {
           }
           await recordVersion(env, full, { cid, at: new Date().toISOString(), bytes: site.totalBytes, files: site.files.length, payment: paymentNote });
           const { txs } = await recordTxs(client, full, { contenthash: `ipfs://${cid}` });
+          await completeTxs(env, state.owner!, txs);
           return ok({
             name: full,
             cid,
@@ -468,6 +557,19 @@ export function createServer(env: Env): McpServer {
             live_url: `https://${full}.limo`,
             transactions: txs,
             next: `Send the transaction${txs.length > 1 ? "s in order" : ""} from ${state.owner} on Ethereum mainnet to point ${full} at the site. It is then live at https://${full}.limo (the first load can take a minute).`,
+            card: card({
+              action: "site",
+              name: full,
+              wallet: state.owner,
+              rows: [
+                ["Files", String(site.files.length)],
+                ["IPFS", `${cid.slice(0, 12)}…${cid.slice(-6)}`],
+                ["Live at", `${full}.limo`],
+              ],
+              warnings: [],
+              url: `https://${cid}.ipfs.dweb.link/`,
+              txs,
+            }),
           });
         };
 
@@ -483,10 +585,24 @@ export function createServer(env: Env): McpServer {
           }
         }
 
+        const payment: PreparedTx = sitePaymentTx(env);
+        await completeTxs(env, state.owner, [payment]);
         const unpaid = {
           name: full,
           price: `${SITE_PRICE_USD} USDC on Base`,
-          payment_transaction: sitePaymentTx(env),
+          payment_transaction: payment,
+          card: card({
+            action: "site_payment",
+            name: full,
+            wallet: state.owner,
+            rows: [
+              ["Files", String(site.files.length)],
+              ["Price", `${SITE_PRICE_USD} USDC on Base`],
+            ],
+            warnings: [],
+            url: env.PUBLIC_URL,
+            txs: [payment],
+          }),
           next: "Send payment_transaction from the name's owner wallet (or its Ethereum/Base address) on Base (chain_id 8453), then call deploy_site again with the same files and payment_tx set to its hash.",
         };
         const paid = getPaidWrapper(env);

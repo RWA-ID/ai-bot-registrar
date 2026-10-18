@@ -39,12 +39,14 @@ export default {
       return json(await takedown(env, cid, reason ?? "takedown"));
     }
 
-    // The robot mark, so clients that show a connector icon from the server's domain find one
+    // The robot mark, so clients that show a connector icon from the server's domain find one.
+    // /favicon.ico is a real multi-size ICO: some favicon fetchers ignore a PNG served under .ico.
     if (["/favicon.ico", "/favicon.png", "/icon.png", "/apple-touch-icon.png"].includes(url.pathname)) {
-      const icon = await fetch("https://botnames.dev/app-icon.png", { cf: { cacheTtl: 86400, cacheEverything: true } });
+      const ico = url.pathname === "/favicon.ico";
+      const icon = await fetch(ico ? "https://botnames.dev/favicon.ico" : "https://botnames.dev/app-icon.png", { cf: { cacheTtl: 86400, cacheEverything: true } });
       return new Response(icon.body, {
         status: icon.status,
-        headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": ico ? "image/x-icon" : "image/png", "Cache-Control": "public, max-age=86400", "Access-Control-Allow-Origin": "*" },
       });
     }
 

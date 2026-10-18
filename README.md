@@ -69,6 +69,8 @@ claude mcp add --transport http botnames https://mcp.botnames.dev/mcp
 2. PayBox signs it after your approval.
 3. `send_transaction` broadcasts it (PayBox signs without sending).
 
+Every transaction comes back with a complete `transaction` object for its sender (nonce, gas, EIP-1559 fees, chainId, in `eth_signTransaction` form), so PayBox signs it as given with nothing to look up. Write tools also render a Bot Names card in hosts that support MCP Apps (Claude, ChatGPT), with a "Complete with PayBox" button. `test/paybox.fork.mjs` signs each one as given against an anvil mainnet fork.
+
 Verified end to end: [firstbot.ai-bot.eth](https://firstbot.ai-bot.eth.limo) was registered from Claude with a PayBox wallet, and its website was published and paid for in the same chat.
 
 ### Tools
