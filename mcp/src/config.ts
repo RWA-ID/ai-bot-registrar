@@ -23,7 +23,7 @@ export const REGISTRAR = "0x52bf7D9A2F50ED9707c573FEAC708716E49B4275" as const;
 export const REGISTRAR_DEPLOY_BLOCK = 26_198_609;
 export const V1_REGISTRAR = "0x309b7AA8C5713Df1a25D05AA6DE07Ec6971Edf89" as const;
 export const NAME_WRAPPER = "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401" as const;
-export const UNIVERSAL_RESOLVER = "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe" as const;
+export const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" as const;
 export const PUBLIC_RESOLVER = "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63" as const;
 
 /** ENS Reverse Registrar (mainnet; owns addr.reverse) and the ENSIP-19 L2 reverse registrar (Base). */
@@ -57,9 +57,7 @@ export const NAME_WRAPPER_ABI = parseAbi([
   "function setResolver(bytes32 node, address resolver)",
 ]);
 
-export const UNIVERSAL_RESOLVER_ABI = parseAbi([
-  "function findResolver(bytes name) view returns (address resolver, bytes32 node, uint256 offset)",
-]);
+export const ENS_REGISTRY_ABI = parseAbi(["function resolver(bytes32 node) view returns (address)"]);
 
 export const RESOLVER_ABI = parseAbi([
   "function setAddr(bytes32 node, address a)",

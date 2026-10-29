@@ -7,14 +7,13 @@ import {
   http,
   namehash,
   pad,
-  toHex,
   zeroAddress,
   type Address,
   type Hex,
   type PublicClient,
 } from "viem";
 import { base, mainnet } from "viem/chains";
-import { normalize, packetToBytes } from "viem/ens";
+import { normalize } from "viem/ens";
 import { getCoderByCoinType } from "@ensdomains/address-encoder";
 import {
   NAME_WRAPPER,
@@ -24,8 +23,8 @@ import {
   REGISTRAR,
   REGISTRAR_ABI,
   REGISTRAR_DEPLOY_BLOCK,
-  UNIVERSAL_RESOLVER,
-  UNIVERSAL_RESOLVER_ABI,
+  ENS_REGISTRY,
+  ENS_REGISTRY_ABI,
   V1_REGISTRAR,
   V1_REGISTRAR_ABI,
   type Env,
@@ -90,16 +89,19 @@ export async function getNameState(client: PublicClient, name: string): Promise<
   };
 }
 
-/** The resolver set on `name` itself (via the Universal Resolver, survives ENSv2), or null. */
+/**
+ * The resolver set on `name` itself, or null. Read from the v1 ENS registry: since ENSv2 the
+ * Universal Resolver's findResolver answers ENSV1Resolver (a wrapper that reverts on getters
+ * like contenthash()) for every v1 name, at the parent's offset for subnames.
+ */
 export async function findOwnResolver(client: PublicClient, name: string): Promise<Address | null> {
-  const [resolver, , offset] = await client.readContract({
-    address: UNIVERSAL_RESOLVER,
-    abi: UNIVERSAL_RESOLVER_ABI,
-    functionName: "findResolver",
-    args: [toHex(packetToBytes(name))],
+  const resolver = await client.readContract({
+    address: ENS_REGISTRY,
+    abi: ENS_REGISTRY_ABI,
+    functionName: "resolver",
+    args: [namehash(name)],
   });
-  // offset > 0 means the resolver belongs to a parent (wildcard), not to this name
-  return resolver === zeroAddress || offset !== 0n ? null : getAddress(resolver);
+  return resolver === zeroAddress ? null : getAddress(resolver);
 }
 
 const LOOKUP_COINS: { label: string; coinType: bigint }[] = [
@@ -155,8 +157,8 @@ function displayAddress(coinType: bigint, value: string): string {
 }
 
 async function readContenthash(client: PublicClient, name: string): Promise<string | null> {
-  const resolver = await client.getEnsResolver({ name });
-  if (!resolver || resolver === zeroAddress) return null;
+  const resolver = await findOwnResolver(client, name);
+  if (!resolver) return null;
   const { decode, getCodec } = await import("@ensdomains/content-hash");
   const raw = (await client.readContract({
     address: resolver,
